@@ -1,7 +1,10 @@
 {
-    "cSpell.words": [
-        "Ollama",
-        "qwen",
-        "scoper"
-    ]
+  "editor.defaultFormatter": "esbenp.prettier-vscode",
+  "editor.formatOnSave": true,
+  "files.trimFinalNewlines": false,
+  "files.insertFinalNewline": true,
+  "editor.codeActionsOnSave": {
+    "source.fixAll.eslint": "explicit"
+  },
+  "cSpell.words": ["bunx", "Ollama", "qwen", "scoper"]
 }
