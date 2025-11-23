@@ -9,5 +9,3 @@ export const ReviewResultSchema = z.object({
     }),
   ),
 });
-
-export type ReviewResultDto = z.infer<typeof ReviewResultSchema>;

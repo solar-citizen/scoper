@@ -4,8 +4,8 @@ import { ConfigService } from 'src/config/config.service';
 
 import { ReviewResultSchema } from '../dto/review-result.dto';
 import type { LLMProvider, LLMReviewResult } from '../types/llm.types';
-import { getOllamaErrorMessage } from './error.util';
-import { parseJSONResponse } from './json.util';
+import { getOllamaErrorMessage } from './lib/error.util';
+import { parseJSONResponse } from './lib/json.util';
 
 @Injectable()
 export class OllamaProvider implements LLMProvider {
