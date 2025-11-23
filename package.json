@@ -23,6 +23,8 @@
     "@nestjs/config": "^4.0.2",
     "@nestjs/core": "^11.1.9",
     "@nestjs/platform-express": "^11.1.9",
+    "@octokit/request-error": "^7.1.0",
+    "@octokit/rest": "^22.0.1",
     "reflect-metadata": "^0.2.2",
     "rxjs": "^7.8.2",
     "zod": "^4.1.12"
