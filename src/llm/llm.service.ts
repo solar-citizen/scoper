@@ -1,9 +1,9 @@
 import { Injectable, Logger } from '@nestjs/common';
 
+import { LLMReviewResult } from './llm.types';
 import { GeminiProvider } from './providers/gemini.provider';
 import { getGeminiErrorMessage, getOllamaErrorMessage } from './providers/lib/error.util';
 import { OllamaProvider } from './providers/ollama.provider';
-import { LLMReviewResult } from './llm.types';
 
 @Injectable()
 export class LlmService {

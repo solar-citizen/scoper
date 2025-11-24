@@ -1,6 +1,35 @@
 # Code Review Rules
 
-## JavaScript - General Guidelines:
+These rules apply to ALL projects unless overridden by project-specific rules.
+
+## TypeScript/JavaScript - General Guidelines:
+
+### General Code Quality
+
+- Meaningful variable and function names
+- Comments for complex logic
+
+### TypeScript
+
+- Do not use `any` type
+- Use types for object shapes
+
+### Security
+
+- Never log sensitive data (passwords, tokens, API keys)
+
+### Performance
+
+- Avoid blocking the event loop
+- Use async/await properly
+- Cache expensive operations when appropriate
+- Avoid N+1 operations
+
+### Code Style
+
+- Consistent indentation
+
+### Other (but not less prioritized)
 
 - Prefer `type` over `interface` for types
 
@@ -31,6 +60,8 @@ return
 - Always use camelCase over CAPITAL_CASE for constants
 
 - Avoid using any form of type assertions
+
+- Do not use `any` type
 
 - Avoid using one-letter variable names, except for indexes in loops (i, j, k)
 

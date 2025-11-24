@@ -35,6 +35,10 @@ export class ConfigService {
     return Number(this.configService.get('APP_PORT'));
   }
 
+  get reviewInstructionsPath(): string {
+    return this.configService.get('REVIEW_INSTRUCTIONS_PATH');
+  }
+
   get githubToken(): string {
     return this.configService.get<string>('GITHUB_TOKEN');
   }
