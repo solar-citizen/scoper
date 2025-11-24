@@ -2,8 +2,8 @@ import { Injectable, Logger } from '@nestjs/common';
 import { Ollama } from 'ollama';
 import { ConfigService } from 'src/config/config.service';
 
-import { ReviewResultSchema } from '../dto/review-result.dto';
-import type { LLMProvider, LLMReviewResult } from '../types/llm.types';
+import { ReviewResultSchema } from '../llm.schema';
+import type { LLMProvider, LLMReviewResult } from '../llm.types';
 import { getOllamaErrorMessage } from './lib/error.util';
 import { parseJSONResponse } from './lib/json.util';
 
