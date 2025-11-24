@@ -4,7 +4,6 @@ import { ConfigService } from 'src/config/config.service';
 
 import { ReviewResultSchema } from '../llm.schema';
 import type { LLMProvider, LLMReviewResult } from '../llm.types';
-import { getGeminiErrorMessage } from './lib/error.util';
 import { parseJSONResponse } from './lib/json.util';
 
 @Injectable()
@@ -19,28 +18,23 @@ export class GeminiProvider implements LLMProvider {
   }
 
   async reviewCode(prompt: string): Promise<LLMReviewResult> {
-    try {
-      this.logger.log('Sending code to Gemini for review...');
+    this.logger.log('Sending code to Gemini for review...');
 
-      const model = this.genAI.getGenerativeModel({
-        model: this.model,
-        generationConfig: {
-          temperature: 0.1,
-          topP: 0.95,
-          topK: 40,
-          maxOutputTokens: 8192,
-        },
-      });
+    const model = this.genAI.getGenerativeModel({
+      model: this.model,
+      generationConfig: {
+        temperature: 0.1,
+        topP: 0.95,
+        topK: 40,
+        maxOutputTokens: 8192,
+      },
+    });
 
-      const result = await model.generateContent(prompt);
-      const validated = ReviewResultSchema.parse(parseJSONResponse(result.response.text()));
+    const result = await model.generateContent(prompt);
+    const validated = ReviewResultSchema.parse(parseJSONResponse(result.response.text()));
 
-      this.logger.log(`Gemini returned ${validated.comments.length} comments`);
+    this.logger.log(`Gemini returned ${validated.comments.length} comments`);
 
-      return validated;
-    } catch (err: unknown) {
-      this.logger.error(`Gemini review failed: ${getGeminiErrorMessage(err)}`);
-      throw err;
-    }
+    return validated;
   }
 }
