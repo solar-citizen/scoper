@@ -1,24 +1,24 @@
 import { BadRequestException, Body, Controller, Headers, Logger, Post } from '@nestjs/common';
+import { getErrorMessage } from 'src/lib/error.util';
 
-// import { ReviewService } from '../review/review.service';
-import type { WebhookPayloadDto } from './dto/webhook-payload.dto';
-import { GithubService } from './github.service';
+import { GithubService } from '../github/github.service';
+import { ReviewService } from '../review/review.service';
+import type { WebhookPayloadDto } from './webhook-payload.dto';
 
 @Controller('webhook')
-export class GithubController {
-  private readonly logger = new Logger(GithubController.name);
+export class WebhookController {
+  private readonly logger = new Logger(WebhookController.name);
 
   constructor(
     private githubService: GithubService,
-    // private reviewService: ReviewService,
+    private reviewService: ReviewService,
   ) {}
 
   @Post('github')
-  handleWebhook(
+  async handleWebhook(
     @Body() payload: WebhookPayloadDto,
     @Headers('x-hub-signature-256') signature: string,
   ) {
-    // Verify webhook signature for security
     const payloadString = JSON.stringify(payload);
 
     if (!this.githubService.verifyWebhookSignature(payloadString, signature)) {
@@ -27,7 +27,6 @@ export class GithubController {
 
     const { action } = payload;
 
-    // Only process opened and synchronized (updated) PRs
     if (!['opened', 'synchronize'].includes(action)) {
       this.logger.log(`Ignoring PR action: ${action}`);
       return { message: 'Ignored' };
@@ -42,10 +41,9 @@ export class GithubController {
 
     this.logger.log(`Processing PR #${context.pullNumber} - ${action}`);
 
-    // Trigger review asynchronously (don't block webhook response)
-    // await this.reviewService.reviewPR(context).catch(err => {
-    //   this.logger.error(`Review failed for PR #${context.pullNumber}: ${err.message}`);
-    // });
+    await this.reviewService.reviewPR(context).catch((err: unknown) => {
+      this.logger.error(`Review failed for PR #${context.pullNumber}: ${getErrorMessage(err)}`);
+    });
 
     return { message: 'Review started' };
   }
