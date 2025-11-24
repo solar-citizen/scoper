@@ -74,8 +74,7 @@ export class ReviewService {
         this.logger.log('Review completed: No issues found');
       }
     } catch (err: unknown) {
-      this.logger.error(`PR review failed: ${getErrorMessage(err)}`);
-      throw err;
+      throw new Error(`PR review failed: ${getErrorMessage(err)}`);
     }
   }
 
