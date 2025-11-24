@@ -17,6 +17,7 @@ export default defineConfig(
       '**/build/**',
       '**/@generated/**',
       '**/eslint.config.mjs',
+      '.prettierrc.mjs',
     ],
   },
   eslint.configs.recommended,

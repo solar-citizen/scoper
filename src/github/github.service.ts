@@ -4,20 +4,20 @@ import { Octokit } from '@octokit/rest';
 import { createHmac, timingSafeEqual } from 'crypto';
 import { ConfigService } from 'src/config/config.service';
 
-type PRFile = {
+export type PRFile = {
   filename: string;
   patch?: string;
   status: string;
 };
 
-type PRContext = {
+export type PRContext = {
   owner: string;
   repo: string;
   pullNumber: number;
   sha: string;
 };
 
-type ReviewComment = {
+export type ReviewComment = {
   path: string;
   line: number;
   side: 'RIGHT';

@@ -5,5 +5,5 @@ export default {
   tabWidth: 2,
   trailingComma: 'all',
   semi: true,
-  arrowParens: 'avoid',
+  arrowParens: 'always',
 };
