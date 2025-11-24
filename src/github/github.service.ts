@@ -4,7 +4,25 @@ import { Octokit } from '@octokit/rest';
 import { createHmac, timingSafeEqual } from 'crypto';
 import { ConfigService } from 'src/config/config.service';
 
-import type { PRContext, PRFile, ReviewComment } from './lib/types/github.types';
+type PRFile = {
+  filename: string;
+  patch?: string;
+  status: string;
+};
+
+type PRContext = {
+  owner: string;
+  repo: string;
+  pullNumber: number;
+  sha: string;
+};
+
+type ReviewComment = {
+  path: string;
+  line: number;
+  side: 'RIGHT';
+  body: string;
+};
 
 @Injectable()
 export class GithubService {
@@ -79,8 +97,7 @@ export class GithubService {
   }
 
   verifyWebhookSignature(payload: string, signature: string): boolean {
-    const secret = this.configService.githubWebHookSecret;
-    const hmac = createHmac('sha256', secret);
+    const hmac = createHmac('sha256', this.configService.githubWebHookSecret);
     const digest = 'sha256=' + hmac.update(payload).digest('hex');
 
     return timingSafeEqual(Buffer.from(signature), Buffer.from(digest));
@@ -88,10 +105,8 @@ export class GithubService {
 
   private logError(operation: string, err: unknown): void {
     if (err instanceof RequestError) {
-      this.logger.error(`${operation}: ${err.message}`, {
-        status: err.status,
-        request: err.request,
-      });
+      const { message, status, request } = err;
+      this.logger.error(`${operation}: ${message}`, { status, request });
     } else if (err instanceof Error) {
       this.logger.error(`${operation}: ${err.message}`);
     } else {
