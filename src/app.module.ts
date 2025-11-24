@@ -1,10 +1,11 @@
 import { Module } from '@nestjs/common';
 
 import { ConfigModule } from './config/config.module';
-import { LlmModule } from './src/llm/llm.module';
+import { GithubModule } from './github/github.module';
+import { LlmModule } from './llm/llm.module';
 
 @Module({
-  imports: [ConfigModule, LlmModule],
+  imports: [ConfigModule, LlmModule, GithubModule],
   controllers: [],
   providers: [],
 })
