@@ -19,10 +19,12 @@
     "update:bun": "bun run bin/update-bun.js"
   },
   "dependencies": {
+    "@google/generative-ai": "^0.24.1",
     "@nestjs/common": "^11.1.9",
     "@nestjs/config": "^4.0.2",
     "@nestjs/core": "^11.1.9",
     "@nestjs/platform-express": "^11.1.9",
+    "ollama": "^0.6.3",
     "@octokit/request-error": "^7.1.0",
     "@octokit/rest": "^22.0.1",
     "reflect-metadata": "^0.2.2",
