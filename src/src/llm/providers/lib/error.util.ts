@@ -6,11 +6,11 @@ function isOllamaError(err: unknown): err is ErrorResponse {
 }
 
 export function getOllamaErrorMessage(err: unknown): string {
-  return isOllamaError(err) ? err.error : 'Unknown error occurred';
+  return isOllamaError(err) ? err.error : `Unknown error occurred: ${String(err)}`;
 }
 
 export function getGeminiErrorMessage(err: unknown): string {
   return err instanceof GoogleGenerativeAIError || err instanceof Error
     ? err.message
-    : 'Unknown error occurred';
+    : `Unknown error occurred: ${String(err)}`;
 }
