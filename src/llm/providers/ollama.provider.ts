@@ -13,7 +13,7 @@ export class OllamaProvider implements LLMProvider {
   private readonly model: string;
 
   constructor(private configService: ConfigService) {
-    this.model = this.configService.localLlmBaseUrl;
+    this.model = this.configService.localLlmModel;
     this.ollama = new Ollama({ host: this.configService.localLlmBaseUrl });
   }
 
