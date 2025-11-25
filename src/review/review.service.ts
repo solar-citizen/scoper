@@ -49,7 +49,8 @@ export class ReviewService {
       const files = await this.githubService.getPRFiles(context);
       const reviewableFiles = files.filter(
         (file): file is PRFile & { patch: string } =>
-          Boolean(file.patch) && !this.ignoreList.includes(file.filename),
+          Boolean(file.patch) &&
+          !this.ignoreList.some((pattern) => file.filename.endsWith(pattern)),
       );
 
       if (!reviewableFiles.length) {
