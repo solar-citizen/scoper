@@ -1,11 +1,13 @@
 import { BadRequestException, Body, Controller, Headers, Logger, Post } from '@nestjs/common';
-import { getErrorMessage } from 'src/lib/error.util';
+import { ApiTags } from '@nestjs/swagger';
+import { getErrorMessage } from 'src/_lib/error.util';
 
 import { GithubService } from '../github/github.service';
 import { ReviewService } from '../review/review.service';
 import type { WebhookPayloadDto } from './webhook-payload.dto';
 
-@Controller('webhook')
+@ApiTags('Webhook')
+@Controller('api/webhook')
 export class WebhookController {
   private readonly logger = new Logger(WebhookController.name);
 

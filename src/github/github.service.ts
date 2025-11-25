@@ -3,6 +3,7 @@ import { RequestError } from '@octokit/request-error';
 import { Octokit } from '@octokit/rest';
 import { createHmac, timingSafeEqual } from 'crypto';
 import { ConfigService } from 'src/config/config.service';
+import { extractValidLineNumbers } from 'src/review/prompts/prompt.util';
 
 export type PRFile = {
   filename: string;
@@ -112,5 +113,71 @@ export class GithubService {
     } else {
       this.logger.error(`${operation}: ${String(err)}`);
     }
+  }
+
+  validateComments(patch: string, comments: ReviewComment[]): ReviewComment[] {
+    const validLines = new Set(extractValidLineNumbers(patch));
+
+    const validComments = comments.filter(({ line }) => {
+      const isValid = validLines.has(line);
+
+      if (!isValid) {
+        this.logger.warn(`Skipping comment at invalid line ${line}`);
+      }
+
+      return isValid;
+    });
+
+    this.logger.log(`Validated ${validComments.length}/${comments.length} comments`);
+
+    return validComments;
+  }
+
+  async getExistingScoperComments({ owner, repo, pullNumber }: PRContext): Promise<Set<string>> {
+    try {
+      const { data: comments } = await this.octokit.pulls.listReviewComments({
+        owner,
+        repo,
+        pull_number: pullNumber,
+        per_page: 100,
+      });
+
+      const existingMap = new Set<string>();
+
+      for (const comment of comments) {
+        if (!comment.line) {
+          continue;
+        }
+
+        if (comment.body.includes('🤖 **Scoper review:**')) {
+          existingMap.add(`${comment.path}:${comment.line}`);
+        }
+      }
+
+      return existingMap;
+    } catch (err: unknown) {
+      this.logError('Failed to fetch existing comments', err);
+      return new Set();
+    }
+  }
+
+  filterDuplicateComments(
+    newComments: ReviewComment[],
+    existingCommentsFingerprints: Set<string>,
+  ): ReviewComment[] {
+    const uniqueComments: ReviewComment[] = [];
+
+    for (const comment of newComments) {
+      const key = `${comment.path}:${comment.line}`;
+
+      if (existingCommentsFingerprints.has(key)) {
+        this.logger.debug(`Skipping duplicate comment on ${key}`);
+        continue;
+      }
+
+      uniqueComments.push(comment);
+    }
+
+    return uniqueComments;
   }
 }
