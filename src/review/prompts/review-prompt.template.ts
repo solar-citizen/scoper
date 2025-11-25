@@ -21,7 +21,20 @@ export function buildReviewPrompt(
 
   return `You are a code-review system analyzing a git diff.
 
-    CRITICAL INSTRUCTION - LINE NUMBERS:
+    OUTPUT FORMAT (CRITICAL):
+    You MUST output ONLY valid JSON with no markdown, no explanations, no preamble.
+    Required JSON shape:
+    {
+        "comments": [
+            {
+                "line": <number>,
+                "severity": "info"|"warning"|"error",
+                "message": "<string>"
+            }
+        ]
+    }
+
+    LINE NUMBERS (CRITICAL):
     - The code below has been pre-processed to show line numbers at the start of each line.
     - Format: "LINE_NUMBER:(+) CODE"
     - Example: "15:(+) const x = 1;" means line 15 is a new line.
@@ -34,7 +47,7 @@ export function buildReviewPrompt(
     - Keep messages concise (under 200 characters)
     - If no issues found, return empty comments array
     
-    Focus areas:
+    FOCUS AREAS:
     - Bugs and logical errors
     - Security vulnerabilities
     - Performance issues
