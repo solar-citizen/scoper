@@ -1,4 +1,4 @@
-import { GoogleGenerativeAI } from '@google/generative-ai';
+import { GoogleGenerativeAI, SchemaType } from '@google/generative-ai';
 import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from 'src/config/config.service';
 
@@ -27,6 +27,36 @@ export class GeminiProvider implements LLMProvider {
         topP: 0.95,
         topK: 40,
         maxOutputTokens: 8192,
+        responseMimeType: 'application/json',
+        responseSchema: {
+          type: SchemaType.OBJECT,
+          properties: {
+            comments: {
+              type: SchemaType.ARRAY,
+              items: {
+                type: SchemaType.OBJECT,
+                properties: {
+                  line: {
+                    type: SchemaType.NUMBER,
+                    description: 'Line number from the diff',
+                  },
+                  severity: {
+                    type: SchemaType.STRING,
+                    description: 'Must be one of: info, warning, error',
+                    enum: ['info', 'warning', 'error'],
+                    format: 'enum',
+                  },
+                  message: {
+                    type: SchemaType.STRING,
+                    description: 'Concise description of the issue',
+                  },
+                },
+                required: ['line', 'severity', 'message'],
+              },
+            },
+          },
+          required: ['comments'],
+        },
       },
     });
 

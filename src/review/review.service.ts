@@ -1,7 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { readFileSync } from 'fs';
+import { getErrorMessage } from 'src/_lib/error.util';
 import { ConfigService } from 'src/config/config.service';
-import { getErrorMessage } from 'src/lib/error.util';
 
 import {
   GithubService,
@@ -57,23 +57,31 @@ export class ReviewService {
         return;
       }
 
-      const allComments: ReviewComment[] = [];
+      const existingCommentsFingerprints =
+        await this.githubService.getExistingScoperComments(context);
+      this.logger.log(`Found ${existingCommentsFingerprints.size} existing Scoper comments`);
 
-      for (const file of reviewableFiles) {
+      const allNewComments: ReviewComment[] = [];
+
+      for (const { filename, patch } of reviewableFiles) {
         try {
-          allComments.push(
-            ...(await this.reviewFile(file.filename, file.patch, projectInstructions)),
-          );
+          const fileComments = await this.reviewFile(filename, patch, projectInstructions);
+          allNewComments.push(...fileComments);
         } catch (err: unknown) {
-          this.logger.error(`Failed to review ${file.filename}: ${getErrorMessage(err)}`);
+          this.logger.error(`Failed to review ${filename}: ${getErrorMessage(err)}`);
         }
       }
 
-      if (allComments.length > 0) {
-        await this.githubService.postReviewComments(context, allComments);
-        this.logger.log(`Review completed: ${allComments.length} comments posted`);
+      const uniqueComments = this.githubService.filterDuplicateComments(
+        allNewComments,
+        existingCommentsFingerprints,
+      );
+
+      if (uniqueComments.length > 0) {
+        await this.githubService.postReviewComments(context, uniqueComments);
+        this.logger.log(`Review completed: ${uniqueComments.length} new comments posted`);
       } else {
-        this.logger.log('Review completed: No issues found');
+        this.logger.log('Review completed: No new issues found');
       }
     } catch (err: unknown) {
       throw new Error(`PR review failed: ${getErrorMessage(err)}`);
@@ -104,7 +112,7 @@ export class ReviewService {
           break;
         }
       } catch (err: unknown) {
-        this.logger.error(`Error loading Scoper instructions: ${getErrorMessage(err)}`);
+        this.logger.warn(`Error loading Scoper instructions: ${getErrorMessage(err)}`);
         continue;
       }
     }
@@ -124,7 +132,7 @@ export class ReviewService {
           break;
         }
       } catch (err: unknown) {
-        this.logger.error(`Error loading Copilot instructions: ${getErrorMessage(err)}`);
+        this.logger.warn(`Error loading Copilot instructions: ${getErrorMessage(err)}`);
         continue;
       }
     }
@@ -167,9 +175,13 @@ export class ReviewService {
       body: this.formatCommentBody(severity, message),
     }));
 
-    this.logger.log(`File ${filename}: ${githubComments.length} comments`);
+    const validatedComments = this.githubService.validateComments(patch, githubComments);
 
-    return githubComments;
+    this.logger.log(
+      `File ${filename}: ${validatedComments.length} comments(${githubComments.length - validatedComments.length} filtered)`,
+    );
+
+    return validatedComments;
   }
 
   private formatCommentBody(severity: string, message: string): string {
@@ -180,6 +192,6 @@ export class ReviewService {
         info: 'ℹ️',
       }[severity] ?? 'ℹ️';
 
-    return `${emoji} **${severity.toUpperCase()}**: ${message}`;
+    return `🤖 **Scoper review:**\n\n${emoji} **${severity.toUpperCase()}**: ${message}`;
   }
 }
