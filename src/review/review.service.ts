@@ -16,7 +16,7 @@ import { buildReviewPrompt } from './prompts/review-prompt.template';
 export class ReviewService {
   private readonly logger = new Logger(ReviewService.name);
   private readonly baseInstructions: string;
-  private readonly generatedFiles = ['bun.lock'];
+  private readonly ignoreList = ['bun.lock', 'package.json'];
 
   constructor(
     private githubService: GithubService,
@@ -49,7 +49,8 @@ export class ReviewService {
       const files = await this.githubService.getPRFiles(context);
       const reviewableFiles = files.filter(
         (file): file is PRFile & { patch: string } =>
-          Boolean(file.patch) && !this.generatedFiles.includes(file.filename),
+          Boolean(file.patch) &&
+          !this.ignoreList.some((pattern) => file.filename.endsWith(pattern)),
       );
 
       if (!reviewableFiles.length) {
