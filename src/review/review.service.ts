@@ -40,9 +40,7 @@ export class ReviewService {
 
       const projectInstructions = await this.loadProjectInstructions(context);
 
-      if (projectInstructions) {
-        this.logger.log('Loaded project-specific instructions');
-      } else {
+      if (!projectInstructions) {
         this.logger.log('No project-specific instructions found, using base only');
       }
 
@@ -60,7 +58,10 @@ export class ReviewService {
 
       const existingCommentsFingerprints =
         await this.githubService.getExistingScoperComments(context);
-      this.logger.log(`Found ${existingCommentsFingerprints.size} existing Scoper comments`);
+
+      if (!existingCommentsFingerprints.size) {
+        this.logger.log(`Could not find any existing Scoper comments`);
+      }
 
       const allNewComments: ReviewComment[] = [];
 
@@ -90,7 +91,7 @@ export class ReviewService {
   }
 
   private async loadProjectInstructions(context: PRContext): Promise<string | undefined> {
-    const instructionSources = {
+    const { copilot, scoper } = {
       scoper: ['.scoper.md', '.scoper/rules.md', '.github/scoper.md', 'docs/scoper.md'],
       copilot: ['.github/copilot-instructions.md'],
     };
@@ -98,7 +99,7 @@ export class ReviewService {
     let scoperInstructions: string | null = null;
     let copilotInstructions: string | null = null;
 
-    for (const path of instructionSources.scoper) {
+    for (const path of scoper) {
       try {
         const content = await this.githubService.getFileContent(
           context.owner,
@@ -118,7 +119,7 @@ export class ReviewService {
       }
     }
 
-    for (const path of instructionSources.copilot) {
+    for (const path of copilot) {
       try {
         const content = await this.githubService.getFileContent(
           context.owner,
@@ -140,7 +141,9 @@ export class ReviewService {
 
     if (scoperInstructions && copilotInstructions) {
       this.logger.log('Merging Scoper + Copilot instructions');
-      return this.mergeInstructions(scoperInstructions, copilotInstructions);
+
+      return `# Scoper-Specific Instructions: ${scoperInstructions}
+      # Additional Context from Copilot Instructions: ${copilotInstructions}`;
     }
 
     if (scoperInstructions) {
@@ -152,11 +155,6 @@ export class ReviewService {
     }
 
     return undefined;
-  }
-
-  private mergeInstructions(scoperInstructions: string, copilotInstructions: string): string {
-    return `# Scoper-Specific Instructions: ${scoperInstructions}
-    # Additional Context from Copilot Instructions: ${copilotInstructions}`;
   }
 
   private async reviewFile(

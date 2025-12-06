@@ -34,23 +34,27 @@ export class GithubService {
     this.octokit = new Octokit({ auth: this.configService.githubToken });
   }
 
-  async getPRFiles(context: PRContext): Promise<PRFile[]> {
+  async getPRFiles({ owner, repo, pullNumber }: PRContext): Promise<PRFile[]> {
     try {
-      const { data: files } = await this.octokit.pulls.listFiles({
-        owner: context.owner,
-        repo: context.repo,
-        pull_number: context.pullNumber,
+      const { data } = await this.octokit.pulls.listFiles({
+        owner,
+        repo,
+        pull_number: pullNumber,
       });
 
-      this.logger.log(`Fetched ${files.length} files from PR #${context.pullNumber}`);
-      return files;
+      this.logger.log(`Fetched ${data.length} files from PR #${pullNumber}`);
+
+      return data;
     } catch (err: unknown) {
       this.logError('Failed to fetch PR files', err);
       throw err;
     }
   }
 
-  async postReviewComments(context: PRContext, comments: ReviewComment[]): Promise<void> {
+  async postReviewComments(
+    { owner, repo, pullNumber }: PRContext,
+    comments: ReviewComment[],
+  ): Promise<void> {
     try {
       if (comments.length === 0) {
         this.logger.log('No comments to post');
@@ -58,14 +62,14 @@ export class GithubService {
       }
 
       await this.octokit.pulls.createReview({
-        owner: context.owner,
-        repo: context.repo,
-        pull_number: context.pullNumber,
+        owner,
+        repo,
+        pull_number: pullNumber,
         event: 'COMMENT',
         comments,
       });
 
-      this.logger.log(`Posted ${comments.length} comments to PR #${context.pullNumber}`);
+      this.logger.log(`Posted ${comments.length} comments to PR #${pullNumber}`);
     } catch (err: unknown) {
       this.logError('Failed to post comments', err);
       throw err;
@@ -99,15 +103,17 @@ export class GithubService {
 
   verifyWebhookSignature(payload: string, signature: string): boolean {
     const hmac = createHmac('sha256', this.configService.githubWebHookSecret);
-    const digest = 'sha256=' + hmac.update(payload).digest('hex');
+    const digest = `sha256=${hmac.update(payload).digest('hex')}`;
 
     return timingSafeEqual(Buffer.from(signature), Buffer.from(digest));
   }
 
   private logError(operation: string, err: unknown): void {
     if (err instanceof RequestError) {
-      const { message, status, request } = err;
-      this.logger.error(`${operation}: ${message}`, { status, request });
+      this.logger.error(`${operation}: ${err.message}`, {
+        status: err.status,
+        request: err.request,
+      });
     } else if (err instanceof Error) {
       this.logger.error(`${operation}: ${err.message}`);
     } else {

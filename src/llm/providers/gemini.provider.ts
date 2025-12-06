@@ -60,8 +60,8 @@ export class GeminiProvider implements LLMProvider {
       },
     });
 
-    const result = await model.generateContent(prompt);
-    const validated = ReviewResultSchema.parse(parseJSONResponse(result.response.text()));
+    const { response } = await model.generateContent(prompt);
+    const validated = ReviewResultSchema.parse(parseJSONResponse(response.text()));
 
     this.logger.log(`Gemini returned ${validated.comments.length} comments`);
 
