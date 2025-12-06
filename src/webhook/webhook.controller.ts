@@ -27,7 +27,7 @@ export class WebhookController {
       throw new BadRequestException('Invalid webhook signature');
     }
 
-    const { action } = payload;
+    const { action, repository, pull_request } = payload;
 
     if (!['opened', 'synchronize'].includes(action)) {
       this.logger.log(`Ignoring PR action: ${action}`);
@@ -35,10 +35,10 @@ export class WebhookController {
     }
 
     const context = {
-      owner: payload.repository.owner.login,
-      repo: payload.repository.name,
-      pullNumber: payload.pull_request.number,
-      sha: payload.pull_request.head.sha,
+      owner: repository.owner.login,
+      repo: repository.name,
+      pullNumber: pull_request.number,
+      sha: pull_request.head.sha,
     };
 
     this.logger.log(`Processing PR #${context.pullNumber} - ${action}`);
