@@ -6,5 +6,5 @@
   "editor.codeActionsOnSave": {
     "source.fixAll.eslint": "explicit"
   },
-  "cSpell.words": ["bunx", "Ollama", "qwen", "scoper", "Shadcn"]
+  "cSpell.words": ["bunx", "Ollama", "qwen", "scoper", "Shadcn", "smhd"]
 }
