@@ -1,5 +1,6 @@
 import { Injectable, Logger } from '@nestjs/common';
 
+import { RateLimitError } from './llm.error';
 import { LLMReviewResult } from './llm.types';
 import { GeminiProvider } from './providers/gemini.provider';
 import { getGeminiErrorMessage, getOllamaErrorMessage } from './providers/lib/error.util';
@@ -18,6 +19,10 @@ export class LlmService {
     try {
       return await this.geminiProvider.reviewCode(prompt);
     } catch (geminiErr: unknown) {
+      if (geminiErr instanceof RateLimitError) {
+        throw geminiErr;
+      }
+
       this.logger.warn(
         `Gemini failed, falling back to Ollama: ${getGeminiErrorMessage(geminiErr)}`,
       );

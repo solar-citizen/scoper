@@ -1,7 +1,9 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { readFileSync } from 'fs';
 import { getErrorMessage } from 'src/_lib/error.util';
+import { sleep } from 'src/_lib/time.util';
 import { ConfigService } from 'src/config/config.service';
+import { RateLimitError } from 'src/llm/llm.error';
 
 import {
   GithubService,
@@ -63,19 +65,28 @@ export class ReviewService {
         this.logger.log(`Could not find any existing Scoper comments`);
       }
 
-      const allNewComments: ReviewComment[] = [];
+      const newComments: ReviewComment[] = [];
 
-      for (const { filename, patch } of reviewableFiles) {
+      for (let i = 0; i < reviewableFiles.length; i++) {
+        const { filename, patch } = reviewableFiles[i];
+
         try {
           const fileComments = await this.reviewFile(filename, patch, projectInstructions);
-          allNewComments.push(...fileComments);
+          newComments.push(...fileComments);
         } catch (err: unknown) {
+          if (err instanceof RateLimitError) {
+            this.logger.warn(`Rate limit on ${filename}, waiting ${err.retryDelay}...`);
+            await sleep(err.retryDelayMs);
+            i--;
+            continue;
+          }
+
           this.logger.error(`Failed to review ${filename}: ${getErrorMessage(err)}`);
         }
       }
 
       const uniqueComments = this.githubService.filterDuplicateComments(
-        allNewComments,
+        newComments,
         existingCommentsFingerprints,
       );
 
