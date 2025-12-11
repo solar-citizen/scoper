@@ -10,8 +10,6 @@ const validationObject = z.object({
   REVIEW_INSTRUCTIONS_PATH: z.string(),
   GITHUB_TOKEN: z.string(),
   GITHUB_WEBHOOK_SECRET: z.string(),
-  GITHUB_REPO_OWNER: z.string(),
-  GITHUB_REPO_NAME: z.string(),
   LLM_API_KEY: z.string(),
   LLM_MODEL: z.string(),
   LOCAL_LLM_BASE_URL: z.url(),
@@ -45,14 +43,6 @@ export class ConfigService {
 
   get githubWebHookSecret(): string {
     return this.configService.get<string>('GITHUB_WEBHOOK_SECRET');
-  }
-
-  get githubRepoOwner(): string {
-    return this.configService.get<string>('GITHUB_REPO_OWNER');
-  }
-
-  get githubRepoName(): string {
-    return this.configService.get<string>('GITHUB_REPO_NAME');
   }
 
   get llmApiKey(): string {
