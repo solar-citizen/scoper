@@ -2,12 +2,32 @@
 
 These rules apply to ALL projects unless overridden by project-specific rules.
 
-## TypeScript/JavaScript - General Guidelines:
+## CRITICAL: When to Comment
+
+**ONLY comment when you find ACTUAL PROBLEMS.** Do not comment to validate correct code or point out that something follows the rules. Empty review is better than unnecessary noise.
+
+Examples of what NOT to comment on:
+
+- Code that is already correct
+- Simple, self-explanatory conditional logic
+- Proper string handling in JSX
+- Code that follows all style rules
+
+Examples of what TO comment on:
+
+- Using `any` type
+- Leaked sensitive data in logs
+- N+1 database queries
+- Blocking the event loop
+- Wrong function declaration style
+
+## TypeScript/JavaScript - General Guidelines
 
 ### General Code Quality
 
 - Meaningful variable and function names
-- Comments for complex logic
+- Comments ONLY for genuinely complex logic (algorithms, non-obvious business rules, tricky edge cases)
+- Do NOT require comments for simple conditionals or standard patterns
 
 ### TypeScript
 
@@ -33,7 +53,7 @@ These rules apply to ALL projects unless overridden by project-specific rules.
 
 - Prefer `type` over `interface` for types
 
-- Import ordering is dictated by Eslint. Do not report errors, unless you're certain they're inconsistent with Eslint's rules
+- Import ordering is dictated by Eslint. Do not report errors unless certain they're inconsistent with Eslint's rules
 
 - Avoid using optionality/nullability unless necessary
 
@@ -43,19 +63,23 @@ These rules apply to ALL projects unless overridden by project-specific rules.
 
 - Never use single-line if or if/else statements, for example:
 
-wrong:
+Wrong:
 
-if (!foo) return
+```typescript
+if (!foo) return;
+```
 
-must be
+Must be:
 
+```typescript
 if (!foo) {
-return
+  return;
 }
+```
 
 - Always prefer destructuring
 
-- Avoid creating unnecessary aliases. If an entity is defined as password, do not rename it to pwd or pw
+- Avoid creating unnecessary aliases. If an entity is defined as password, do not rename it to pwd or pw. ONLY flag this on NEW code, not removed code.
 
 - Always use camelCase over CAPITAL_CASE for constants
 
@@ -67,19 +91,23 @@ return
 
 - Use early returns, for example:
 
-wrong:
+Wrong:
 
+```typescript
 if (foo === 'bar' && !bar) {
-foobar()
+  foobar();
 }
+```
 
-use
+Correct:
 
+```typescript
 if (foo !== 'bar' || bar) {
-return
+  return;
 }
 
-foobar()
+foobar();
+```
 
 ## Function Declaration Guidelines
 
@@ -88,73 +116,73 @@ When to Use Each Function Style
 ### React Components
 
 Recommended style: Function Declaration
-Syntax Example: function Button({onClick, children}) {...}
+Syntax Example: `function Button({onClick, children}) {...}`
 Rationale: Clearer stack traces, consistent with React docs, easier to understand
 
 ### React Custom Hooks
 
 Recommended style: Function Declaration
-Syntax Example: function useCustomHook() {...}
+Syntax Example: `function useCustomHook() {...}`
 Rationale: Better debugging, follows React convention, clear signaling of "this is a hook"
 
 ### Event Handlers
 
 Recommended style: Arrow Functions
-Syntax Example: const handleClick = () => {...}
+Syntax Example: `const handleClick = () => {...}`
 Rationale: Preserves lexical this, concise for component methods
 
 ### Callbacks (inline)
 
 Recommended style: Arrow Functions
-Syntax Example: array.map(item => transformItem(item))
+Syntax Example: `array.map(item => transformItem(item))`
 Rationale: Concise, clear intent, preserves context
 
 ### Utility Functions
 
 Recommended style: Function Declaration
-Syntax Example: function getPaginationRange(...) {...}
+Syntax Example: `function getPaginationRange(...) {...}`
 Rationale: Better debugging, clearer stack traces, no this binding issues
 
 ### Recursive Functions
 
 Recommended style: Named Function Expression
-Syntax Example: const traverse = function traverse(node) {...}
+Syntax Example: `const traverse = function traverse(node) {...}`
 Rationale: Self-reference by name regardless of variable reassignment
 
 ### Class Methods
 
 Recommended style: Method Shorthand
-Syntax Example: class X { method() {...} }
+Syntax Example: `class X { method() {...} }`
 Rationale: Standard syntax for class methods
 
 ### One-liners
 
 Recommended style: Arrow Functions
-Syntax Example: const double = n => n \* 2;
+Syntax Example: `const double = n => n * 2;`
 Rationale: Concise, implicit return
 
 ### Higher-order Functions
 
 Recommended style: Function Declaration
-Syntax Example: function createFormatter(format) {...}
+Syntax Example: `function createFormatter(format) {...}`
 Rationale: Clearer stack traces, better debugging
 
 ### Page Components
 
 Recommended style: Function Declaration
-Syntax Example: function HomePage() {...}
+Syntax Example: `function HomePage() {...}`
 Rationale: Clearer stack traces, consistent with React docs, easier to understand
 
 ### Layout Components
 
 Recommended style: Function Declaration
-Syntax Example: function DashboardLayout() {...}
+Syntax Example: `function DashboardLayout() {...}`
 Rationale: Clearer stack traces, consistent with React docs, easier to understand
 
 ### IIFE (Immediately Invoked Function Expression)
 
 Recommended style: Arrow or Anonymous
-Syntax Example: (() => {...})()
+Syntax Example: `(() => {...})()`
 Rationale: Concise for one-time execution blocks
 
 ### Quick Reference
