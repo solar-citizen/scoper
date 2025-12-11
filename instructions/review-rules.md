@@ -77,7 +77,52 @@ if (!foo) {
 }
 ```
 
-- Always prefer destructuring
+- Prefer destructuring when extracting values from objects or arrays
+
+Examples:
+
+Correct - Destructure when extracting:
+
+```typescript
+// Good
+const { name, age } = object;
+const [first, second] = array;
+```
+
+Wrong - Don't create unnecessary intermediate variables:
+
+```typescript
+// Bad - data is only used once
+const data = await fetchData();
+return { data };
+
+// Good - direct return when value is used only once
+return { data: await fetchData() };
+```
+
+Correct - Intermediate variable when used multiple times:
+
+```typescript
+// Good - data is used for validation and return
+const data = await fetchData();
+
+if (!isValid(data)) {
+  throw new Error('Invalid data');
+}
+
+return { data };
+```
+
+This rule applies to:
+
+- Function parameters: `function foo({ bar, baz }) {...}`
+- Variable assignment: `const { x, y } = point;`
+- Array operations: `const [first, ...rest] = items;`
+
+This rule does NOT mean:
+
+- Creating intermediate variables just to destructure them in returns
+- Destructuring for single property access (use dot notation)
 
 - Avoid creating unnecessary aliases. If an entity is defined as password, do not rename it to pwd or pw. ONLY flag this on NEW code, not removed code.
 
