@@ -69,6 +69,8 @@ export function buildReviewPrompt(
       - Code that has no issues
       - Removed lines (marked with [-])
       - Simple logic that is self-explanatory
+      - Code refactoring that removes intermediate variables (this is often an improvement)
+      - Inline operations that are more concise than multi-step equivalents
 
     Review instructions: ${instructionsSection}
     File: ${filename}
