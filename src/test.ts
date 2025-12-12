@@ -143,6 +143,63 @@ export function testRemovedCodeNoComment() {
 }
 
 // =============================================================================
+// TEST CASE 11: Code Comments Should Not Be Reviewed
+// =============================================================================
+// ❌ Expected: NO COMMENT - Regular code comments should be ignored
+
+export function testCodeComments() {
+  // This is a helper function for user authentication
+  // It validates the token and returns user data
+
+  /*
+   * Multi-line comment explaining the logic
+   * This should also be ignored by Scoper
+   */
+
+  return { success: true };
+}
+
+// =============================================================================
+// TEST CASE 12: Comment Annotations Should Not Be Reviewed
+// =============================================================================
+// ❌ Expected: NO COMMENT - TODO, FIXME, NOTE, HACK, etc. should be ignored
+
+export function testCommentAnnotations() {
+  // TODO: Implement proper error handling
+  // FIXME: This needs refactoring
+  // NOTE: This is a temporary solution
+  // HACK: Quick fix for production
+  // XXX: Review this later
+  // @deprecated Use newFunction instead
+
+  const result = performOperation();
+
+  return result;
+}
+
+// =============================================================================
+// TEST CASE 13: Commented-Out Code Should Not Be Reviewed
+// =============================================================================
+// ❌ Expected: NO COMMENT - Commented-out code should be ignored
+
+export function testCommentedOutCode() {
+  const activeCode = true;
+
+  // const oldImplementation = fetchData();
+  // if (oldImplementation) {
+  //   return oldImplementation;
+  // }
+
+  /* 
+  const anotherOldApproach = () => {
+    return fetchData();
+  };
+  */
+
+  return activeCode;
+}
+
+// =============================================================================
 // Mock helper functions for tests
 // =============================================================================
 
@@ -156,4 +213,8 @@ function fetchUserData(userId: string) {
 
 function hashPassword(password: string): string {
   return `hashed_${password}`;
+}
+
+function performOperation() {
+  return { data: 'test' };
 }
