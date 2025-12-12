@@ -1,10 +1,21 @@
-import { GoogleGenerativeAI, SchemaType } from '@google/generative-ai';
+import {
+  ErrorDetails,
+  GoogleGenerativeAI,
+  GoogleGenerativeAIFetchError,
+  SchemaType,
+} from '@google/generative-ai';
 import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from 'src/config/config.service';
 
+import { RateLimitError } from '../llm.error';
 import { ReviewResultSchema } from '../llm.schema';
 import type { LLMProvider, LLMReviewResult } from '../llm.types';
 import { parseJSONResponse } from './lib/json.util';
+import { convertToMilliseconds, isHourDelay } from './lib/time.util';
+
+type RetryInfoDetails = ErrorDetails & {
+  retryDelay?: string;
+};
 
 @Injectable()
 export class GeminiProvider implements LLMProvider {
@@ -60,11 +71,31 @@ export class GeminiProvider implements LLMProvider {
       },
     });
 
-    const result = await model.generateContent(prompt);
-    const validated = ReviewResultSchema.parse(parseJSONResponse(result.response.text()));
+    try {
+      const { response } = await model.generateContent(prompt);
+      const validated = ReviewResultSchema.parse(parseJSONResponse(response.text()));
 
-    this.logger.log(`Gemini returned ${validated.comments.length} comments`);
+      this.logger.log(`Gemini returned ${validated.comments.length} comments`);
 
-    return validated;
+      return validated;
+    } catch (err: unknown) {
+      if (err instanceof GoogleGenerativeAIFetchError) {
+        const retryDetails = err.errorDetails?.find(
+          (detail): detail is RetryInfoDetails => detail['@type']?.includes('RetryInfo') ?? false,
+        );
+
+        const delay = retryDetails?.retryDelay;
+
+        if (delay && !isHourDelay(delay)) {
+          throw new RateLimitError(
+            'Gemini rate limit exceeded',
+            delay,
+            convertToMilliseconds(delay),
+          );
+        }
+      }
+
+      throw err;
+    }
   }
 }

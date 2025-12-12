@@ -29,6 +29,7 @@
     "@octokit/rest": "^22.0.1",
     "class-transformer": "^0.5.1",
     "class-validator": "^0.14.3",
+    "dayjs": "^1.11.19",
     "ollama": "^0.6.3",
     "reflect-metadata": "^0.2.2",
     "rxjs": "^7.8.2",

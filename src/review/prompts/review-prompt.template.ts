@@ -16,51 +16,66 @@ export function buildReviewPrompt(
 
   const lineNumberHint =
     validLines.length > 0
-      ? `\n\nVALID LINE NUMBERS: ${validLines.join(', ')}\n(You must ONLY comment on these specific line numbers)`
+      ? `\n\nVALID LINE NUMBERS FOR REVIEW: ${validLines.join(', ')}\n(You MUST comment ONLY on these line numbers. Any other line numbers are FORBIDDEN.)`
       : '';
 
   return `You are a code-review system analyzing a git diff.
 
-    OUTPUT FORMAT (CRITICAL):
-    You MUST output ONLY valid JSON with no markdown, no explanations, no preamble.
-    Required JSON shape:
-    {
-        "comments": [
+    CRITICAL RULES (READ CAREFULLY):
+
+    1. OUTPUT FORMAT:
+      - ONLY output valid JSON with NO markdown, NO explanations, NO preamble
+      - Required JSON shape:
+        {
+          "comments": [
             {
-                "line": <number>,
-                "severity": "info"|"warning"|"error",
-                "message": "<string>"
+              "line": <number>,
+              "severity": "info"|"warning"|"error",
+              "message": "<string>"
             }
-        ]
-    }
+          ]
+        }
 
-    LINE NUMBERS (CRITICAL):
-    - The code below has been pre-processed to show line numbers at the start of each line.
-    - Format: "LINE_NUMBER:(+) CODE"
-    - Example: "15:(+) const x = 1;" means line 15 is a new line.
-    - You MUST use the exact line number provided at the start of the line.
-    - ONLY comment on lines marked with (+) (added/changed lines).
-    - DO NOT comment on lines marked with [-] or context lines (no (+)).
+    2. LINE NUMBERS (ABSOLUTE REQUIREMENT):
+      - Code is pre-processed with line numbers: "LINE_NUMBER:(+) CODE"
+      - Example: "15:(+) const x = 1;" means line 15 is a NEW line
+      - ONLY comment on lines with "(+)" prefix (new/changed lines)
+      - NEVER comment on lines with "[-]" prefix (removed lines)
+      - NEVER comment on context lines (no prefix)
+      - Use EXACT line numbers from the start of each line
+      ${lineNumberHint}
 
-    OTHER RULES:
-    - Provide actionable, specific feedback
-    - Keep messages concise (under 200 characters)
-    - If no issues found, return empty comments array
-    
-    FOCUS AREAS:
-    - Bugs and logical errors
-    - Security vulnerabilities
-    - Performance issues
-    - Code style violations
-    - Type safety issues (e.g., using 'any')
+    3. WHEN TO COMMENT (CRITICAL - READ TWICE):
+      - ONLY comment if you find ACTUAL PROBLEMS (bugs, security, performance issues, clear violations)
+      - DO NOT comment on code that is already correct
+      - DO NOT provide validation comments like "This is correct" or "Good practice"
+      - DO NOT comment on simple, self-explanatory logic
+      - DO NOT comment on removed/old code (lines with [-])
+      
+    4. COMMENT QUALITY:
+      - Be specific and actionable
+      - Keep messages under 200 characters
+      - If NO issues found, return: {"comments": []}
+      
+    5. FOCUS AREAS (ONLY FLAG ACTUAL PROBLEMS):
+      - Bugs and logical errors
+      - Security vulnerabilities (leaked secrets, SQL injection, XSS etc.)
+      - Significant performance issues (N+1 queries, blocking operations, unoptimized calculations etc.)
+      - Clear violations of project rules
+      - Type safety issues
 
-    Review instructions:
-    ${instructionsSection}
+    6. DO NOT COMMENT ON:
+      - Code that follows all rules correctly
+      - Code that has no issues
+      - Removed lines (marked with [-])
+      - Simple logic that is self-explanatory
+      - Code refactoring that removes intermediate variables (this is often an improvement)
+      - Inline operations that are more concise than multi-step equivalents
 
+    Review instructions: ${instructionsSection}
     File: ${filename}
-    ${lineNumberHint}
+    Diff to review (with explicit line numbers): ${numberedPatch}
 
-    Diff to review (with explicit line numbers):
-    ${numberedPatch}
-    `;
+    Remember: Empty comments array is PREFERRED over unnecessary comments.
+  `;
 }

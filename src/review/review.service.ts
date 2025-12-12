@@ -1,7 +1,9 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { readFileSync } from 'fs';
 import { getErrorMessage } from 'src/_lib/error.util';
+import { sleep } from 'src/_lib/time.util';
 import { ConfigService } from 'src/config/config.service';
+import { RateLimitError } from 'src/llm/llm.error';
 
 import {
   GithubService,
@@ -40,9 +42,7 @@ export class ReviewService {
 
       const projectInstructions = await this.loadProjectInstructions(context);
 
-      if (projectInstructions) {
-        this.logger.log('Loaded project-specific instructions');
-      } else {
+      if (!projectInstructions) {
         this.logger.log('No project-specific instructions found, using base only');
       }
 
@@ -60,21 +60,33 @@ export class ReviewService {
 
       const existingCommentsFingerprints =
         await this.githubService.getExistingScoperComments(context);
-      this.logger.log(`Found ${existingCommentsFingerprints.size} existing Scoper comments`);
 
-      const allNewComments: ReviewComment[] = [];
+      if (!existingCommentsFingerprints.size) {
+        this.logger.log(`Could not find any existing Scoper comments`);
+      }
 
-      for (const { filename, patch } of reviewableFiles) {
+      const newComments: ReviewComment[] = [];
+
+      for (let i = 0; i < reviewableFiles.length; i++) {
+        const { filename, patch } = reviewableFiles[i];
+
         try {
           const fileComments = await this.reviewFile(filename, patch, projectInstructions);
-          allNewComments.push(...fileComments);
+          newComments.push(...fileComments);
         } catch (err: unknown) {
+          if (err instanceof RateLimitError) {
+            this.logger.warn(`Rate limit on ${filename}, waiting ${err.retryDelay}...`);
+            await sleep(err.retryDelayMs);
+            i--;
+            continue;
+          }
+
           this.logger.error(`Failed to review ${filename}: ${getErrorMessage(err)}`);
         }
       }
 
       const uniqueComments = this.githubService.filterDuplicateComments(
-        allNewComments,
+        newComments,
         existingCommentsFingerprints,
       );
 
@@ -90,7 +102,7 @@ export class ReviewService {
   }
 
   private async loadProjectInstructions(context: PRContext): Promise<string | undefined> {
-    const instructionSources = {
+    const { copilot, scoper } = {
       scoper: ['.scoper.md', '.scoper/rules.md', '.github/scoper.md', 'docs/scoper.md'],
       copilot: ['.github/copilot-instructions.md'],
     };
@@ -98,7 +110,7 @@ export class ReviewService {
     let scoperInstructions: string | null = null;
     let copilotInstructions: string | null = null;
 
-    for (const path of instructionSources.scoper) {
+    for (const path of scoper) {
       try {
         const content = await this.githubService.getFileContent(
           context.owner,
@@ -118,7 +130,7 @@ export class ReviewService {
       }
     }
 
-    for (const path of instructionSources.copilot) {
+    for (const path of copilot) {
       try {
         const content = await this.githubService.getFileContent(
           context.owner,
@@ -140,7 +152,9 @@ export class ReviewService {
 
     if (scoperInstructions && copilotInstructions) {
       this.logger.log('Merging Scoper + Copilot instructions');
-      return this.mergeInstructions(scoperInstructions, copilotInstructions);
+
+      return `# Scoper-Specific Instructions: ${scoperInstructions}
+      # Additional Context from Copilot Instructions: ${copilotInstructions}`;
     }
 
     if (scoperInstructions) {
@@ -152,11 +166,6 @@ export class ReviewService {
     }
 
     return undefined;
-  }
-
-  private mergeInstructions(scoperInstructions: string, copilotInstructions: string): string {
-    return `# Scoper-Specific Instructions: ${scoperInstructions}
-    # Additional Context from Copilot Instructions: ${copilotInstructions}`;
   }
 
   private async reviewFile(
