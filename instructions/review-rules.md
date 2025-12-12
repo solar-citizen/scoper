@@ -12,6 +12,18 @@ Examples of what NOT to comment on:
 - Simple, self-explanatory conditional logic
 - Proper string handling in JSX
 - Code that follows all style rules
+- Code comments (including `TODO`, `FIXME`, `NOTE`, or any other comment annotations)
+- Commented code, e.g:
+
+```typescript
+// someFunctionCall();
+```
+
+or
+
+```typescript
+/* someFunctionCall(); */
+```
 
 Examples of what TO comment on:
 
