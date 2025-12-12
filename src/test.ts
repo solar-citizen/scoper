@@ -71,6 +71,7 @@ export async function testIntermediateVariableWithValidation(userId: string) {
 // TEST CASE 5: Using 'any' Type (Should Comment)
 // =============================================================================
 // ✅ Expected: COMMENT - 'any' type is not allowed
+//
 
 export function testAnyType(data: any) {
   return data.foo;
