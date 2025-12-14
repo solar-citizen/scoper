@@ -56,13 +56,16 @@ export function addLineNumbersToPatch(patch: string): string {
       continue;
     }
 
+    const isAddition = line.startsWith('+');
+    const isReplacement = isAddition && previousWasRemoval;
+
     let prefix = '   ';
     let marker = '';
 
-    if (line.startsWith('+')) {
+    if (isAddition) {
       prefix = '(+)';
 
-      if (previousWasRemoval) {
+      if (isReplacement) {
         marker = ' [REPLACEMENT - review carefully, old code was removed above]';
       }
     }

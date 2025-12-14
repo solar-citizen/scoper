@@ -83,6 +83,7 @@ export function buildReviewPrompt(
     - Removed lines ([-])
     - Context lines (no prefix)
     - Code marked [REPLACEMENT] that fixes issues from removed code
+    - Formatting or style issues in code that already follows the rules
     ${lineNumberHint}
 
     Review rules:
