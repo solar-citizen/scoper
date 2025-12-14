@@ -42,7 +42,7 @@ export class GithubService {
         pull_number: pullNumber,
       });
 
-      this.logger.log(`Fetched ${data.length} files from PR #${pullNumber}`);
+      this.logger.log(`Fetched ${data.length} files from ${repo}, PR #${pullNumber}`);
 
       return data;
     } catch (err: unknown) {

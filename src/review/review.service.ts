@@ -19,6 +19,19 @@ export class ReviewService {
   private readonly logger = new Logger(ReviewService.name);
   private readonly baseInstructions: string;
   private readonly ignoreList = ['bun.lock', 'package.json'];
+  private readonly validationPhrases = [
+    'good practice',
+    'correct',
+    'proper',
+    'well done',
+    'nicely',
+    'great',
+    'excellent',
+    'appropriate',
+    'follows best practice',
+    'is preferred',
+    'is recommended',
+  ];
 
   constructor(
     private githubService: GithubService,
@@ -62,7 +75,7 @@ export class ReviewService {
         await this.githubService.getExistingScoperComments(context);
 
       if (!existingCommentsFingerprints.size) {
-        this.logger.log(`Could not find any existing Scoper comments`);
+        this.logger.log('Could not find any existing Scoper comments');
       }
 
       const newComments: ReviewComment[] = [];
@@ -178,7 +191,20 @@ export class ReviewService {
     const prompt = buildReviewPrompt(filename, patch, this.baseInstructions, projectInstructions);
     const { comments } = await this.llmService.reviewCode(prompt);
 
-    const githubComments: ReviewComment[] = comments.map(({ line, message, severity }) => ({
+    const filteredComments = comments.filter(({ message, severity }) => {
+      const isValidation = this.validationPhrases.some((phrase) =>
+        message.toLowerCase().includes(phrase),
+      );
+
+      if (isValidation && severity === 'info') {
+        this.logger.debug(`Filtered validation comment: ${message.substring(0, 50)}...`);
+        return false;
+      }
+
+      return true;
+    });
+
+    const githubComments: ReviewComment[] = filteredComments.map(({ line, message, severity }) => ({
       path: filename,
       line,
       side: 'RIGHT' as const,
@@ -188,7 +214,7 @@ export class ReviewService {
     const validatedComments = this.githubService.validateComments(patch, githubComments);
 
     this.logger.log(
-      `File ${filename}: ${validatedComments.length} comments(${githubComments.length - validatedComments.length} filtered)`,
+      `File ${filename}: ${validatedComments.length} comments (${comments.length - filteredComments.length} validation filtered, ${githubComments.length - validatedComments.length} line filtered)`,
     );
 
     return validatedComments;

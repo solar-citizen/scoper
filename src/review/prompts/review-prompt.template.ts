@@ -7,8 +7,8 @@ export function buildReviewPrompt(
   projectInstructions?: string,
 ): string {
   const instructionsSection = projectInstructions
-    ? `Base instructions (apply to all projects): ${baseInstructions}
-    Project-specific instructions (take priority): ${projectInstructions}`
+    ? `Base instructions: ${baseInstructions}
+      Project-specific instructions: ${projectInstructions}`
     : baseInstructions;
 
   const validLines = extractValidLineNumbers(patch);
@@ -16,66 +16,79 @@ export function buildReviewPrompt(
 
   const lineNumberHint =
     validLines.length > 0
-      ? `\n\nVALID LINE NUMBERS FOR REVIEW: ${validLines.join(', ')}\n(You MUST comment ONLY on these line numbers. Any other line numbers are FORBIDDEN.)`
+      ? `\nVALID LINE NUMBERS: ${validLines.join(', ')}\nComment ONLY on these lines.`
       : '';
 
-  return `You are a code-review system analyzing a git diff.
+  return `You are reviewing a git diff showing code changes.
 
-    CRITICAL RULES (READ CAREFULLY):
+    UNDERSTAND THE DIFF FORMAT:
+    - Lines with "[-]" = OLD code being REMOVED
+    - Lines with "(+)" = NEW code ADDED/CHANGED
+    - Lines marked "[REPLACEMENT]" = NEW code that replaced OLD code directly above it
+    - Lines without prefix = unchanged context
 
-    1. OUTPUT FORMAT:
-      - ONLY output valid JSON with NO markdown, NO explanations, NO preamble
-      - Required JSON shape:
+    CRITICAL RULE:
+    NEW code is the RESULT of the change, not the problem to fix.
+    If old code had issues and new code fixes them, DO NOT comment.
+    ONLY comment if NEW code introduces actual problems.
+
+    EXAMPLES:
+
+    Example 1 - NO COMMENT NEEDED (fix):
+    [-] export const foo = () => {...}
+    42:(+) export function foo() {...} [REPLACEMENT]
+    Analysis: Changed from arrow to function declaration. This is an improvement. No comment.
+
+    Example 2 - NO COMMENT NEEDED (improvement):
+    [-] <body className={inter.className}>
+    42:(+) <body className={cn(inter.variable, 'antialiased')}> [REPLACEMENT]
+    Analysis: Improved class handling. This is better code. No comment.
+
+    Example 3 - COMMENT NEEDED (introduces problem):
+    [-] const data: UserData = {...}
+    42:(+) const data: any = {...} [REPLACEMENT]
+    Analysis: NEW code uses 'any' type. This is a problem. Comment required.
+
+    Example 4 - COMMENT NEEDED (new bug):
+    42:(+) if (user.role = 'admin') {
+    Analysis: Assignment operator instead of comparison. Bug in NEW code. Comment required.
+
+    OUTPUT FORMAT (JSON only, no markdown):
+    {
+      "comments": [
         {
-          "comments": [
-            {
-              "line": <number>,
-              "severity": "info"|"warning"|"error",
-              "message": "<string>"
-            }
-          ]
+          "line": <number>,
+          "severity": "info"|"warning"|"error",
+          "message": "<string under 200 chars>"
         }
+      ]
+    }
 
-    2. LINE NUMBERS (ABSOLUTE REQUIREMENT):
-      - Code is pre-processed with line numbers: "LINE_NUMBER:(+) CODE"
-      - Example: "15:(+) const x = 1;" means line 15 is a NEW line
-      - ONLY comment on lines with "(+)" prefix (new/changed lines)
-      - NEVER comment on lines with "[-]" prefix (removed lines)
-      - NEVER comment on context lines (no prefix)
-      - Use EXACT line numbers from the start of each line
-      ${lineNumberHint}
+    WHEN TO COMMENT:
+    DO comment on:
+    - Bugs or logical errors in NEW code
+    - Security vulnerabilities in NEW code
+    - Performance issues in NEW code
+    - Type safety violations in NEW code (using 'any', missing types)
+    - Clear rule violations in NEW code
 
-    3. WHEN TO COMMENT (CRITICAL - READ TWICE):
-      - ONLY comment if you find ACTUAL PROBLEMS (bugs, security, performance issues, clear violations)
-      - DO NOT comment on code that is already correct
-      - DO NOT provide validation comments like "This is correct" or "Good practice"
-      - DO NOT comment on simple, self-explanatory logic
-      - DO NOT comment on removed/old code (lines with [-])
-      
-    4. COMMENT QUALITY:
-      - Be specific and actionable
-      - Keep messages under 200 characters
-      - If NO issues found, return: {"comments": []}
-      
-    5. FOCUS AREAS (ONLY FLAG ACTUAL PROBLEMS):
-      - Bugs and logical errors
-      - Security vulnerabilities (leaked secrets, SQL injection, XSS etc.)
-      - Significant performance issues (N+1 queries, blocking operations, unoptimized calculations etc.)
-      - Clear violations of project rules
-      - Type safety issues
+    DO NOT comment on:
+    - Code that is already correct
+    - Improvements over old code
+    - Validation statements ("this is good", "correct approach")
+    - Removed lines ([-])
+    - Context lines (no prefix)
+    - Code marked [REPLACEMENT] that fixes issues from removed code
+    ${lineNumberHint}
 
-    6. DO NOT COMMENT ON:
-      - Code that follows all rules correctly
-      - Code that has no issues
-      - Removed lines (marked with [-])
-      - Simple logic that is self-explanatory
-      - Code refactoring that removes intermediate variables (this is often an improvement)
-      - Inline operations that are more concise than multi-step equivalents
+    Review rules:
+    ${instructionsSection}
 
-    Review instructions: ${instructionsSection}
     File: ${filename}
-    Diff to review (with explicit line numbers): ${numberedPatch}
 
-    Remember: Empty comments array is PREFERRED over unnecessary comments.
+    Diff:
+    ${numberedPatch}
+
+    Return only valid JSON. Empty array {"comments": []} is preferred over unnecessary comments.
   `;
 }
