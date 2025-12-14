@@ -11,7 +11,6 @@ export function buildReviewPrompt(
     : baseInstructions;
 
   const validLines = extractValidLineNumbers(patch);
-  const numberedPatch = addLineNumbersToPatch(patch);
 
   const lineNumberHint =
     validLines.length > 0
@@ -21,8 +20,6 @@ export function buildReviewPrompt(
   return `
     You are an expert Senior Software Engineer level code-review system analyzing a git diff.
     Your goal is to catch bugs, security vulnerabilities, and bad practices.
-
-    ${instructionsSection}
 
     ## INSTRUCTIONS FOR THE REVIEWER (YOU):
 
@@ -106,8 +103,12 @@ export function buildReviewPrompt(
     - Context lines (no \`+\` or \`-\`)
     - Formatting or style issues if the code is syntactically valid (assume Prettier handles it)
 
-    ## CODE TO REVIEW (${filename}):
+    ## INSTRUCTIONS AND CODE TO REVIEW (${filename}):
 
-    ${numberedPatch}
+    **Instructions**:\n
+    ${instructionsSection}
+
+    **Diff**:\n
+    ${addLineNumbersToPatch(patch)}
   `;
 }
