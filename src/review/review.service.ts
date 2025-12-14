@@ -89,7 +89,10 @@ export class ReviewService {
         } catch (err: unknown) {
           if (err instanceof RateLimitError) {
             this.logger.warn(`Rate limit on ${filename}, waiting ${err.retryDelay}...`);
-            await sleep(err.retryDelayMs);
+            this.logger.log(`Error: ${err}`);
+
+            await sleep(err.retryDelayMs + 1000);
+
             i--;
             continue;
           }
