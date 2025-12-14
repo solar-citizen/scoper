@@ -7,8 +7,7 @@ export function buildReviewPrompt(
   projectInstructions?: string,
 ): string {
   const instructionsSection = projectInstructions
-    ? `Base instructions: ${baseInstructions}
-      Project-specific instructions: ${projectInstructions}`
+    ? `Base instructions: ${baseInstructions}\nProject-specific instructions: ${projectInstructions}`
     : baseInstructions;
 
   const validLines = extractValidLineNumbers(patch);
@@ -58,11 +57,16 @@ export function buildReviewPrompt(
       "comments": [
         {
           "line": <number>,
-          "severity": "info"|"warning"|"error",
+          "severity": "warning"|"error",
           "message": "<string under 200 chars>"
         }
       ]
     }
+
+    SEVERITY GUIDELINES:
+    - "error" = Bugs, security issues, breaks functionality
+    - "warning" = Performance issues, style violations, maintainability concerns
+    - DO NOT USE "info" severity - only warnings and errors
 
     WHEN TO COMMENT:
     DO comment on:

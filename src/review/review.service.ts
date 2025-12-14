@@ -192,11 +192,16 @@ export class ReviewService {
     const { comments } = await this.llmService.reviewCode(prompt);
 
     const filteredComments = comments.filter(({ message, severity }) => {
+      if (severity === 'info') {
+        this.logger.debug(`Filtered info comment: ${message.substring(0, 50)}...`);
+        return false;
+      }
+
       const isValidation = this.validationPhrases.some((phrase) =>
         message.toLowerCase().includes(phrase),
       );
 
-      if (isValidation && severity === 'info') {
+      if (isValidation) {
         this.logger.debug(`Filtered validation comment: ${message.substring(0, 50)}...`);
         return false;
       }
@@ -214,7 +219,11 @@ export class ReviewService {
     const validatedComments = this.githubService.validateComments(patch, githubComments);
 
     this.logger.log(
-      `File ${filename}: ${validatedComments.length} comments (${comments.length - filteredComments.length} validation filtered, ${githubComments.length - validatedComments.length} line filtered)`,
+      `
+        File ${filename}: ${validatedComments.length} comments 
+        (${comments.length - filteredComments.length} validation filtered, 
+        ${githubComments.length - validatedComments.length} line filtered)
+      `,
     );
 
     return validatedComments;
