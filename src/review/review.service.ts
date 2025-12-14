@@ -188,8 +188,9 @@ export class ReviewService {
   ): Promise<ReviewComment[]> {
     this.logger.log(`Reviewing file: ${filename}`);
 
-    const prompt = buildReviewPrompt(filename, patch, this.baseInstructions, projectInstructions);
-    const { comments } = await this.llmService.reviewCode(prompt);
+    const { comments } = await this.llmService.reviewCode(
+      buildReviewPrompt(filename, patch, this.baseInstructions, projectInstructions),
+    );
 
     const filteredComments = comments.filter(({ message, severity }) => {
       if (severity === 'info') {

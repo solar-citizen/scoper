@@ -18,57 +18,79 @@ export function buildReviewPrompt(
       ? `\nVALID LINE NUMBERS: ${validLines.join(', ')}\nComment ONLY on these lines.`
       : '';
 
-  return `You are reviewing a git diff showing code changes.
+  return `
+    You are an expert Senior Software Engineer level code-review system analyzing a git diff.
+    Your goal is to catch bugs, security vulnerabilities, and bad practices.
 
-    UNDERSTAND THE DIFF FORMAT:
-    - Lines with "[-]" = OLD code being REMOVED
-    - Lines with "(+)" = NEW code ADDED/CHANGED
-    - Lines marked "[REPLACEMENT]" = NEW code that replaced OLD code directly above it
-    - Lines without prefix = unchanged context
+    ${instructionsSection}
 
-    CRITICAL RULE:
-    NEW code is the RESULT of the change, not the problem to fix.
-    If old code had issues and new code fixes them, DO NOT comment.
-    ONLY comment if NEW code introduces actual problems.
+    ## INSTRUCTIONS FOR THE REVIEWER (YOU):
 
-    EXAMPLES:
+    1. **Format & Syntax**: 
+      The code below is a Git Diff with explicit line numbers on the left.
+      - Format: \`LineNum | ChangeType Code\`
+      - Lines starting with \`+\` are NEW code.
+      - Lines starting with \`-\` are REMOVED code.
+      - **CRITICAL**: Do NOT interpret the leading \`+\` as an arithmetic operator or string concatenation. It is purely a Diff marker.
+      - **CRITICAL**: Do NOT interpret the \`|\` separator as a bitwise OR. It is a visual separator.
 
-    Example 1 - NO COMMENT NEEDED (fix):
-    [-] export const foo = () => {...}
-    42:(+) export function foo() {...} [REPLACEMENT]
-    Analysis: Changed from arrow to function declaration. This is an improvement. No comment.
+    2. **Scope**:
+      - Review strictly the lines marked with \`+\` (additions).
+      - Use the \`-\` lines and context only to understand the changes.
+      - ${lineNumberHint}
 
-    Example 2 - NO COMMENT NEEDED (improvement):
-    [-] <body className={inter.className}>
-    42:(+) <body className={cn(inter.variable, 'antialiased')}> [REPLACEMENT]
-    Analysis: Improved class handling. This is better code. No comment.
+    ## CRITICAL REVIEW RULES:
 
-    Example 3 - COMMENT NEEDED (introduces problem):
-    [-] const data: UserData = {...}
-    42:(+) const data: any = {...} [REPLACEMENT]
-    Analysis: NEW code uses 'any' type. This is a problem. Comment required.
+    **NEW code is the RESULT of the change.** If old code had issues and new code fixes them, DO NOT comment.
+    ONLY comment if NEW code introduces *actual* problems.
 
-    Example 4 - COMMENT NEEDED (new bug):
-    42:(+) if (user.role = 'admin') {
-    Analysis: Assignment operator instead of comparison. Bug in NEW code. Comment required.
+    ### EXAMPLES (How to read the Diff):
 
-    OUTPUT FORMAT (JSON only, no markdown):
+    **Example 1 - NO COMMENT NEEDED (Modernization/Fix):**
+    \`\`\`diff
+        | - export const foo = () => {...}
+    42   | + export function foo() {...}
+    \`\`\`
+    *Analysis*: Changed from arrow to function declaration. This is an improvement/refactor. No comment.
+
+    **Example 2 - NO COMMENT NEEDED (Improvement):**
+    \`\`\`diff
+        | - <body className={inter.className}>
+    42   | + <body className={cn(inter.variable, 'antialiased')}>
+    \`\`\`
+    *Analysis*: Improved class handling. This is better code. No comment.
+
+    **Example 3 - COMMENT NEEDED (Type Violation):**
+    \`\`\`diff
+        | - const data: UserData = {...}
+    42   | + const data: any = {...}
+    \`\`\`
+    *Analysis*: NEW code regresses type safety by using 'any'. Comment required.
+
+    **Example 4 - COMMENT NEEDED (New Bug):**
+    \`\`\`diff
+    42   | + if (user.role = 'admin') {
+    \`\`\`
+    *Analysis*: Assignment operator \`=\` used inside \`if\` condition instead of comparison \`===\`. Bug in NEW code.
+
+    ## OUTPUT FORMAT:
+    Return strictly valid JSON. No Markdown fencing.
     {
       "comments": [
         {
           "line": <number>,
-          "severity": "warning"|"error",
+          "severity": "warning"|"error", 
           "message": "<string under 200 chars>"
         }
       ]
     }
 
-    SEVERITY GUIDELINES:
-    - "error" = Bugs, security issues, breaks functionality
-    - "warning" = Performance issues, style violations, maintainability concerns
-    - DO NOT USE "info" severity - only warnings and errors
+    ## SEVERITY GUIDELINES:
+    - "error": Bugs, security issues, breaks functionality.
+    - "warning": Performance issues, style violations, maintainability concerns.
+    - **DO NOT USE "info"**.
 
-    WHEN TO COMMENT:
+    ## WHEN TO COMMENT:
     DO comment on:
     - Bugs or logical errors in NEW code
     - Security vulnerabilities in NEW code
@@ -80,20 +102,12 @@ export function buildReviewPrompt(
     - Code that is already correct
     - Improvements over old code
     - Validation statements ("this is good", "correct approach")
-    - Removed lines ([-])
-    - Context lines (no prefix)
-    - Code marked [REPLACEMENT] that fixes issues from removed code
-    - Formatting or style issues in code that already follows the rules
-    ${lineNumberHint}
+    - Removed lines (starting with \`-\`)
+    - Context lines (no \`+\` or \`-\`)
+    - Formatting or style issues if the code is syntactically valid (assume Prettier handles it)
 
-    Review rules:
-    ${instructionsSection}
+    ## CODE TO REVIEW (${filename}):
 
-    File: ${filename}
-
-    Diff:
     ${numberedPatch}
-
-    Return only valid JSON. Empty array {"comments": []} is preferred over unnecessary comments.
   `;
 }
