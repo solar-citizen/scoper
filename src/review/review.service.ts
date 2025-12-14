@@ -219,11 +219,7 @@ export class ReviewService {
     const validatedComments = this.githubService.validateComments(patch, githubComments);
 
     this.logger.log(
-      `
-        File ${filename}: ${validatedComments.length} comments 
-        (${comments.length - filteredComments.length} validation filtered, 
-        ${githubComments.length - validatedComments.length} line filtered)
-      `,
+      `File ${filename}: ${validatedComments.length} comments (${comments.length - filteredComments.length} validation filtered, ${githubComments.length - validatedComments.length} line filtered)`,
     );
 
     return validatedComments;
