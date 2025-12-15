@@ -36,7 +36,6 @@ export function addLineNumbersToPatch(patch: string): string {
     if (match) {
       currentLine = parseInt(match[1]);
       result.push(line);
-
       continue;
     }
 
@@ -46,12 +45,11 @@ export function addLineNumbersToPatch(patch: string): string {
     }
 
     if (line.startsWith('-')) {
-      result.push(`     | ${line}`);
+      result.push(`     ${line}`);
       continue;
     }
 
-    result.push(`${currentLine.toString().padEnd(4)} | ${line}`);
-
+    result.push(`${currentLine.toString().padStart(4)} ${line}`);
     currentLine++;
   }
 
