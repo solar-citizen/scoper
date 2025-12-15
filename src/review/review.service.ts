@@ -84,8 +84,7 @@ export class ReviewService {
         const { filename, patch } = reviewableFiles[i];
 
         try {
-          const fileComments = await this.reviewFile(filename, patch, projectInstructions);
-          newComments.push(...fileComments);
+          newComments.push(...(await this.reviewFile(filename, patch, projectInstructions)));
         } catch (err: unknown) {
           if (err instanceof RateLimitError) {
             this.logger.warn(`Rate limit on ${filename}, waiting ${err.retryDelay}...`);
