@@ -55,6 +55,8 @@ export function buildReviewPrompt(
     - "warning": Performance issues, style violations, maintainability concerns, minor improvements
     - "info": Assumptions, validations
 
+    Do not confuse severity levels. Do not use "warning" for errors or informational notes.
+
     If no issues found, return: {"comments": []}
 
     FILE: ${filename}
