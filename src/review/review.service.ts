@@ -3,6 +3,7 @@ import { readFileSync } from 'fs';
 import { getErrorMessage } from 'src/_lib/error.util';
 import { sleep } from 'src/_lib/time.util';
 import { ConfigService } from 'src/config/config.service';
+import { GithubRateLimitError } from 'src/github/github.error';
 import { RateLimitError } from 'src/llm/llm.error';
 
 import {
@@ -54,11 +55,6 @@ export class ReviewService {
       this.logger.log(`Starting review for PR #${context.pullNumber}`);
 
       const projectInstructions = await this.loadProjectInstructions(context);
-
-      if (!projectInstructions) {
-        this.logger.log('No project-specific instructions found, using base only');
-      }
-
       const files = await this.githubService.getPRFiles(context);
       const reviewableFiles = files.filter(
         (file): file is PRFile & { patch: string } =>
@@ -74,10 +70,6 @@ export class ReviewService {
       const existingCommentsFingerprints =
         await this.githubService.getExistingScoperComments(context);
 
-      if (!existingCommentsFingerprints.size) {
-        this.logger.log('Could not find any existing Scoper comments');
-      }
-
       const newComments: ReviewComment[] = [];
 
       for (let i = 0; i < reviewableFiles.length; i++) {
@@ -88,10 +80,8 @@ export class ReviewService {
           newComments.push(...fileComments);
         } catch (err: unknown) {
           if (err instanceof RateLimitError) {
-            this.logger.warn(`Rate limit on ${filename}, waiting ${err.retryDelay}...`);
-
+            this.logger.warn(`LLM rate limit on ${filename}, waiting ${err.retryDelay}...`);
             await sleep(err.retryDelayMs);
-
             i--;
             continue;
           }
@@ -106,13 +96,64 @@ export class ReviewService {
       );
 
       if (uniqueComments.length > 0) {
-        await this.githubService.postReviewComments(context, uniqueComments);
-        this.logger.log(`Review completed: ${uniqueComments.length} new comments posted`);
+        // Split into batches to avoid secondary rate limits
+        const batchSize = 10; // GitHub recommends max 10 comments per request
+        const batches = this.batchComments(uniqueComments, batchSize);
+
+        this.logger.log(`Posting ${uniqueComments.length} comments in ${batches.length} batches`);
+
+        for (let i = 0; i < batches.length; i++) {
+          await this.postCommentsWithRetry(context, batches[i]);
+
+          // Add delay between batches to avoid secondary rate limit
+          if (i < batches.length - 1) {
+            await sleep(2000); // 2 second delay between batches
+          }
+        }
+
+        this.logger.log(`Review completed: ${uniqueComments.length} total comments posted`);
       } else {
         this.logger.log('Review completed: No new issues found');
       }
     } catch (err: unknown) {
       throw new Error(`PR review failed: ${getErrorMessage(err)}`);
+    }
+  }
+
+  private batchComments(comments: ReviewComment[], batchSize: number): ReviewComment[][] {
+    const batches: ReviewComment[][] = [];
+    for (let i = 0; i < comments.length; i += batchSize) {
+      batches.push(comments.slice(i, i + batchSize));
+    }
+
+    return batches;
+  }
+
+  private async postCommentsWithRetry(
+    context: PRContext,
+    comments: ReviewComment[],
+    maxRetries = 3,
+  ): Promise<void> {
+    for (let attempt = 0; attempt < maxRetries; attempt++) {
+      try {
+        await this.githubService.postReviewComments(context, comments);
+        this.logger.log(`Review completed: ${comments.length} new comments posted`);
+        return;
+      } catch (err: unknown) {
+        if (err instanceof GithubRateLimitError) {
+          const waitTime = Math.min(err.retryAfterMs * Math.pow(2, attempt), 5 * 60 * 1000);
+          this.logger.warn(
+            `GitHub ${err.isSecondary ? 'secondary' : 'primary'} rate limit hit. ` +
+              `Waiting ${Math.ceil(waitTime / 1000)}s before retry ${attempt + 1}/${maxRetries}...`,
+          );
+
+          if (attempt < maxRetries - 1) {
+            await sleep(waitTime);
+            continue;
+          }
+        }
+        throw err;
+      }
     }
   }
 
