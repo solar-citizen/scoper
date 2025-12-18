@@ -203,7 +203,7 @@ export class GithubService {
 
         this.logger.error(`${operation}: Primary rate limit hit`);
 
-        throw new GithubRateLimitError(err.message, retryAfterMs, false);
+        throw new GithubRateLimitError(err.message, retryAfterMs);
       }
 
       this.logger.error(`${operation}: ${err.message}`, {
