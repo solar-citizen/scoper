@@ -45,11 +45,12 @@ export function addLineNumbersToPatch(patch: string): string {
     }
 
     if (line.startsWith('-')) {
-      result.push(`     ${line}`);
+      result.push(`[-] ${line}`);
       continue;
     }
 
-    result.push(`${currentLine.toString().padStart(4)} ${line}`);
+    const prefix = line.startsWith('+') ? '(+)' : '   ';
+    result.push(`${currentLine}:${prefix} ${line.substring(1)}`);
     currentLine++;
   }
 

@@ -235,17 +235,8 @@ export class ReviewService {
       buildReviewPrompt(filename, patch, this.baseInstructions, projectInstructions),
     );
 
-    const filteredComments = comments.filter(({ message, severity }) => {
-      if (severity === 'info') {
-        this.logger.debug(`Filtered info comment: ${message.substring(0, 50)}...`);
-        return false;
-      }
-
-      const isValidation = this.validationPhrases.some((phrase) =>
-        message.toLowerCase().includes(phrase),
-      );
-
-      if (isValidation) {
+    const filteredComments = comments.filter(({ message }) => {
+      if (this.validationPhrases.some((phrase) => message.toLowerCase().includes(phrase))) {
         this.logger.debug(`Filtered validation comment: ${message.substring(0, 50)}...`);
         return false;
       }

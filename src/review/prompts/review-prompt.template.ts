@@ -7,60 +7,87 @@ export function buildReviewPrompt(
   projectInstructions?: string,
 ): string {
   const instructionsSection = projectInstructions
-    ? `Base instructions (apply to all projects):\n${baseInstructions}\n\nProject-specific instructions (take priority):\n${projectInstructions}`
+    ? `Base instructions (apply to all projects): ${baseInstructions}
+    Project-specific instructions (take priority): ${projectInstructions}`
     : baseInstructions;
 
   const validLines = extractValidLineNumbers(patch);
 
   const lineNumbersHint =
     validLines.length > 0
-      ? `\n\nVALID LINE NUMBERS: ${validLines.join(', ')}\nYou MUST use ONLY these exact line numbers in your comments.`
+      ? `\n\nVALID LINE NUMBERS FOR REVIEW: ${validLines.join(', ')}\n(You MUST comment ONLY on these line numbers. Any other line numbers are FORBIDDEN.)`
       : '';
 
-  return `You are an expert code reviewer analyzing a git diff.
+  return `You are a code-review system analyzing a git diff.
 
-    DIFF FORMAT EXPLANATION:
-    - Each line starts with a line number (e.g., "  42 + const x = 1;" means line 42)
-    - Lines with "+" after the number = NEW code being added (REVIEW THESE)
-    - Lines with "-" after the number = OLD code being removed (IGNORE THESE)
-    - Lines with " " (space) after the number = unchanged context (IGNORE THESE)
+    CRITICAL RULES:
 
-    CRITICAL: The "+", "-", and " " are git diff markers, NOT part of the code syntax.
-    Do not interpret them as operators, concatenation, or code elements.
-
-    REVIEW RULES:
-    ${instructionsSection}${lineNumbersHint}
-
-    SCOPE:
-    - ONLY comment on lines marked with "+" (new/changed code)
-    - DO NOT comment on lines marked with "-" (removed code)
-    - DO NOT comment on context lines (no marker or space marker)
-    - DO NOT comment if code is correct and follows all rules
-    - Empty review is better than unnecessary comments
-
-    OUTPUT FORMAT:
-    Return ONLY valid JSON with NO markdown fencing, NO explanations:
-    {
-      "comments": [
+    1. OUTPUT FORMAT:
+      - ONLY output valid JSON with NO markdown, NO explanations, NO preamble
+      - Required JSON shape:
         {
-          "line": <number from start of line>,
-          "severity": "info"|"warning"|"error",
-          "message": "<specific, actionable message under 200 chars>"
+          "comments": [
+            {
+              "line": <number>,
+              "severity": "info"|"warning"|"error",
+              "message": "<string>"
+            }
+          ]
         }
-      ]
-    }
 
-    SEVERITY:
-    - "error": Bugs, security vulnerabilities, breaks functionality
-    - "warning": Performance issues, style violations, maintainability concerns, minor improvements
-    - "info": Assumptions, validations
+    2. LINE NUMBERS:
+      - Code is pre-processed with line numbers: "LINE_NUMBER:(+) CODE"
+      - Example: "15:(+) const x = 1;" means line 15 is a NEW line
+      - ONLY comment on lines with "(+)" prefix (new/changed lines)
+      - NEVER comment on lines with "[-]" prefix (removed lines)
+      - NEVER comment on context lines (no prefix)
+      - Use EXACT line numbers from the start of each line
 
-    Do not confuse severity levels. Do not use "warning" for errors or informational notes.
+      ${lineNumbersHint}
 
-    If no issues found, return: {"comments": []}
+    3. WHEN TO COMMENT:
+      - ONLY comment if you find ACTUAL PROBLEMS (bugs, security, performance issues, clear violations)
+      - DO NOT comment on code that is already correct
+      - DO NOT provide validation comments like "This is correct" or "Good practice"
+      - DO NOT comment on simple, self-explanatory logic
+      - DO NOT comment on removed/old code (lines with [-])
+      
+    4. COMMENT QUALITY:
+      - Be specific and actionable
+      - Keep messages under 200 characters
+      - If NO issues found, return: {"comments": []}
+      
+    5. ONLY FLAG ACTUAL PROBLEMS:
+      - Bugs and logical errors
+      - Security vulnerabilities (leaked secrets, SQL injection, XSS etc.)
+      - Significant performance issues (N+1 queries, blocking operations, unoptimized calculations etc.)
+      - Clear violations of project rules
+      - Type safety issues
 
-    FILE: ${filename}
+    6. DO NOT COMMENT ON:
+      - Code that follows all rules correctly
+      - Code that has no issues
+      - Removed lines (marked with [-])
+      - Simple logic that is self-explanatory
+      - Code refactoring that removes intermediate variables (this is often an improvement)
+      - Inline operations that are more concise than multi-step equivalents
 
-    DIFF: \n${addLineNumbersToPatch(patch)}
+    7. SEVERITY LEVELS:
+      - "error": Bugs, security vulnerabilities, breaks functionality
+      - "warning": Performance issues, style violations, maintainability concerns, improvements
+      - "info": Assumptions, validations, unnecessary improvements
+
+    Review instructions: 
+    ${instructionsSection}
+
+    File: 
+    ${filename} 
+    
+    Diff to review (with explicit line numbers): 
+    ${addLineNumbersToPatch(patch)}
+
+    Do not confuse severity levels.
+
+    Empty comments array is PREFERRED over unnecessary comments.
   `;
 }
