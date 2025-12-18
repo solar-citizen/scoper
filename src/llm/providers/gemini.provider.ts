@@ -5,9 +5,9 @@ import {
   SchemaType,
 } from '@google/generative-ai';
 import { Injectable, Logger } from '@nestjs/common';
-import { oneMinuteMs, sleep } from 'src/_lib/time.util';
 import { ConfigService } from 'src/config/config.service';
 
+import { RateLimiter } from '../../_lib/rate-limiter.util';
 import { RateLimitError } from '../llm.error';
 import { ReviewResultSchema } from '../llm.schema';
 import type { LLMProvider, LLMReviewResult } from '../llm.types';
@@ -23,47 +23,16 @@ export class GeminiProvider implements LLMProvider {
   private readonly logger = new Logger(GeminiProvider.name);
   private readonly genAI: GoogleGenerativeAI;
   private readonly model: string;
-  private readonly requestTimestamps: number[] = [];
-  private readonly maxRequestsPerMinute = 15;
-  private readonly timeWindowMs = oneMinuteMs;
+  private readonly rateLimiter: RateLimiter;
 
   constructor(private configService: ConfigService) {
     this.model = this.configService.llmModel;
     this.genAI = new GoogleGenerativeAI(this.configService.llmApiKey);
+    this.rateLimiter = new RateLimiter(15, 0.25);
   }
 
   async reviewCode(prompt: string): Promise<LLMReviewResult> {
-    const now = Date.now();
-    const oneMinuteAgo = now - this.timeWindowMs;
-
-    // Remove timestamps older than 1 minute
-    while (this.requestTimestamps.length > 0 && this.requestTimestamps[0] < oneMinuteAgo) {
-      this.requestTimestamps.shift();
-    }
-
-    // If we're at limit, wait until oldest request expires
-    if (this.requestTimestamps.length >= this.maxRequestsPerMinute) {
-      const waitMs = this.requestTimestamps[0] + this.timeWindowMs - now;
-
-      if (waitMs > 0) {
-        this.logger.log(
-          `Rate limit: ${this.requestTimestamps.length}/${this.maxRequestsPerMinute} requests in last minute. ` +
-            `Waiting ${Math.ceil(waitMs / 1000)}s...`,
-        );
-        await sleep(waitMs);
-
-        const afterWaitCutoff = Date.now() - this.timeWindowMs;
-        while (this.requestTimestamps.length > 0 && this.requestTimestamps[0] < afterWaitCutoff) {
-          this.requestTimestamps.shift();
-        }
-      }
-    }
-
-    this.requestTimestamps.push(Date.now());
-
-    if (this.requestTimestamps.length > this.maxRequestsPerMinute * 2) {
-      this.requestTimestamps.splice(0, this.requestTimestamps.length - this.maxRequestsPerMinute);
-    }
+    await this.rateLimiter.consume(1);
 
     this.logger.log('Sending code to Gemini for review...');
 
