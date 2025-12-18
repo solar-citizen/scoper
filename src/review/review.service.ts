@@ -1,7 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { readFileSync } from 'fs';
 import { getErrorMessage } from 'src/_lib/error.util';
-import { sleep } from 'src/_lib/time.util';
+import { oneSecondMs, sleep } from 'src/_lib/time.util';
 import { ConfigService } from 'src/config/config.service';
 import { GithubRateLimitError } from 'src/github/github.error';
 import { RateLimitError } from 'src/llm/llm.error';
@@ -82,7 +82,9 @@ export class ReviewService {
           if (err instanceof RateLimitError) {
             this.logger.warn(`LLM rate limit on ${filename}, waiting ${err.retryDelay}...`);
             await sleep(err.retryDelayMs);
+
             i--;
+
             continue;
           }
 
@@ -96,8 +98,7 @@ export class ReviewService {
       );
 
       if (uniqueComments.length > 0) {
-        // Split into batches to avoid secondary rate limits
-        const batchSize = 10; // GitHub recommends max 10 comments per request
+        const batchSize = 10;
         const batches = this.batchComments(uniqueComments, batchSize);
 
         this.logger.log(`Posting ${uniqueComments.length} comments in ${batches.length} batches`);
@@ -105,9 +106,8 @@ export class ReviewService {
         for (let i = 0; i < batches.length; i++) {
           await this.postCommentsWithRetry(context, batches[i]);
 
-          // Add delay between batches to avoid secondary rate limit
-          if (i < batches.length - 1) {
-            await sleep(2000); // 2 second delay between batches
+          if (i < batches.length - oneSecondMs) {
+            await sleep(oneSecondMs * 2);
           }
         }
 

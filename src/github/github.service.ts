@@ -3,12 +3,11 @@ import { RequestError } from '@octokit/request-error';
 import { Octokit } from '@octokit/rest';
 import { createHmac, timingSafeEqual } from 'crypto';
 import { getErrorMessage } from 'src/_lib/error.util';
+import { oneMinuteMs } from 'src/_lib/time.util';
 import { ConfigService } from 'src/config/config.service';
 import { extractValidLineNumbers } from 'src/review/prompts/prompt.util';
 
 import { GithubRateLimitError } from './github.error';
-
-const oneMinuteMs = 60000;
 
 export type PRFile = {
   filename: string;

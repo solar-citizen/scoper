@@ -1,12 +1,11 @@
 import { Injectable, Logger } from '@nestjs/common';
+import { oneHourMs } from 'src/_lib/time.util';
 
 import { RateLimitError } from './llm.error';
 import { LLMReviewResult } from './llm.types';
 import { GeminiProvider } from './providers/gemini.provider';
 import { getGeminiErrorMessage, getOllamaErrorMessage } from './providers/lib/error.util';
 import { OllamaProvider } from './providers/ollama.provider';
-
-const oneHourMs = 60 * 60 * 1000;
 
 @Injectable()
 export class LlmService {
