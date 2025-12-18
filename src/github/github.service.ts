@@ -199,7 +199,10 @@ export class GithubService {
 
       if (err.status === 403 && err.response?.headers['x-ratelimit-remaining'] === '0') {
         const resetTime = err.response.headers['x-ratelimit-reset'];
-        const retryAfterMs = resetTime ? parseInt(resetTime) * 1000 - Date.now() : oneMinuteMs;
+        const parsedResetTime = resetTime ? parseInt(resetTime, 10) : NaN;
+        const retryAfterMs = !isNaN(parsedResetTime)
+          ? parsedResetTime * 1000 - Date.now()
+          : oneMinuteMs;
 
         this.logger.error(`${operation}: Primary rate limit hit`);
 

@@ -32,6 +32,8 @@ export class ReviewService {
     'follows best practice',
     'is preferred',
     'is recommended',
+    'good way',
+    'is good',
   ];
 
   constructor(
