@@ -259,7 +259,7 @@ export class ReviewService {
     const lineFiltered = githubComments.length - validatedComments.length;
 
     this.logger.log(
-      `File ${filename}: ${validatedComments.length} comments (${infoFiltered} info filtered, ${lineFiltered} line filtered)`,
+      `File ${filename}: ${validatedComments.length} comments (${infoFiltered} filtered, ${lineFiltered} line filtered)`,
     );
 
     return validatedComments;

@@ -71,8 +71,23 @@ export function buildReviewPrompt(
       - Simple logic that is self-explanatory
       - Code refactoring that removes intermediate variables (this is often an improvement)
       - Inline operations that are more concise than multi-step equivalents
+      - Framework patterns being used correctly (interceptors, guards, middleware, decorators etc. are NOT "overhead" when doing their job)
+      - Necessary functionality labeled as "overhead" (e.g., auth interceptors setting cookies, guards checking permissions, middleware parsing data)
 
-    7. SEVERITY LEVELS:
+    7. UNDERSTAND THE CODE BEFORE COMMENTING:
+      - DO NOT generate generic advice based on seeing keywords (interceptor, schema, JWT, etc.)
+      - ANALYZE THE ACTUAL LOGIC and behavior of the code
+      - VERIFY your suggestion isn't already implemented in the code
+      - DO NOT suggest something the code is already doing correctly
+      - Examples of WRONG comments to avoid:
+        * "Use interceptors for cookies" when interceptors ARE being used
+        * "Prioritize cookies over headers" when cookies ARE already prioritized (check array order!)
+        * "Don't validate passwords in schema" when schema only validates INPUT FORMAT (length/type), not authentication
+        * "This adds overhead" when the functionality is essential and lightweight
+      - If you don't understand how the code works, return empty comments array
+      - Better to miss an issue than generate nonsense advice
+
+    8. SEVERITY LEVELS:
       - "error": Bugs, security vulnerabilities, breaks functionality
       - "warning": Performance issues, style violations, maintainability concerns, improvements
       - "info": Assumptions, validations, unnecessary improvements
@@ -88,6 +103,10 @@ export function buildReviewPrompt(
 
     Do not confuse severity levels.
 
+    Do not be overly pedantic and review only necessary parts of code.
+
     Empty comments array is PREFERRED over unnecessary comments.
+
+    READ AND UNDERSTAND THE CODE LOGIC before suggesting anything. Do not generate keyword-based generic advice.
   `;
 }
