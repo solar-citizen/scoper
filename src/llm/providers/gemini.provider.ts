@@ -7,6 +7,7 @@ import {
 import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from 'src/config/config.service';
 
+import { RateLimiter } from '../../_lib/rate-limiter.util';
 import { RateLimitError } from '../llm.error';
 import { ReviewResultSchema } from '../llm.schema';
 import type { LLMProvider, LLMReviewResult } from '../llm.types';
@@ -22,13 +23,17 @@ export class GeminiProvider implements LLMProvider {
   private readonly logger = new Logger(GeminiProvider.name);
   private readonly genAI: GoogleGenerativeAI;
   private readonly model: string;
+  private readonly rateLimiter: RateLimiter;
 
   constructor(private configService: ConfigService) {
     this.model = this.configService.llmModel;
     this.genAI = new GoogleGenerativeAI(this.configService.llmApiKey);
+    this.rateLimiter = new RateLimiter(15, 0.25);
   }
 
   async reviewCode(prompt: string): Promise<LLMReviewResult> {
+    await this.rateLimiter.consume(1);
+
     this.logger.log('Sending code to Gemini for review...');
 
     const model = this.genAI.getGenerativeModel({
