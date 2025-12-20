@@ -2,8 +2,12 @@ import { Injectable, Logger } from '@nestjs/common';
 import { RequestError } from '@octokit/request-error';
 import { Octokit } from '@octokit/rest';
 import { createHmac, timingSafeEqual } from 'crypto';
+import { getErrorMessage } from 'src/_lib/error.util';
+import { oneMinuteMs } from 'src/_lib/time.util';
 import { ConfigService } from 'src/config/config.service';
 import { extractValidLineNumbers } from 'src/review/prompts/prompt.util';
+
+import { GithubRateLimitError } from './github.error';
 
 export type PRFile = {
   filename: string;
@@ -42,7 +46,7 @@ export class GithubService {
         pull_number: pullNumber,
       });
 
-      this.logger.log(`Fetched ${data.length} files from PR #${pullNumber}`);
+      this.logger.log(`Fetched ${data.length} files from ${repo}, PR #${pullNumber}`);
 
       return data;
     } catch (err: unknown) {
@@ -71,8 +75,7 @@ export class GithubService {
 
       this.logger.log(`Posted ${comments.length} comments to PR #${pullNumber}`);
     } catch (err: unknown) {
-      this.logError('Failed to post comments', err);
-      throw err;
+      this.handleGithubError('Failed to post comments', err);
     }
   }
 
@@ -185,5 +188,35 @@ export class GithubService {
     }
 
     return uniqueComments;
+  }
+
+  private handleGithubError(operation: string, err: unknown): never {
+    if (err instanceof RequestError) {
+      if (err.status === 403 && err.message.includes('secondary rate limit')) {
+        this.logger.error(`${operation}: Secondary rate limit hit`);
+        throw new GithubRateLimitError(err.message, oneMinuteMs, true);
+      }
+
+      if (err.status === 403 && err.response?.headers['x-ratelimit-remaining'] === '0') {
+        const resetTime = err.response.headers['x-ratelimit-reset'];
+        const parsedResetTime = resetTime ? parseInt(resetTime, 10) : NaN;
+        const retryAfterMs = !isNaN(parsedResetTime)
+          ? parsedResetTime * 1000 - Date.now()
+          : oneMinuteMs;
+
+        this.logger.error(`${operation}: Primary rate limit hit`);
+
+        throw new GithubRateLimitError(err.message, retryAfterMs);
+      }
+
+      this.logger.error(`${operation}: ${err.message}`, {
+        status: err.status,
+        request: err.request,
+      });
+    } else {
+      this.logger.error(`${operation}: ${getErrorMessage(err)}`);
+    }
+
+    throw err;
   }
 }
