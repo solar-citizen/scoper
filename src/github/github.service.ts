@@ -86,12 +86,7 @@ export class GithubService {
     ref: string,
   ): Promise<string | null> {
     try {
-      const { data } = await this.octokit.repos.getContent({
-        owner,
-        repo,
-        path,
-        ref,
-      });
+      const { data } = await this.octokit.repos.getContent({ owner, repo, path, ref });
 
       if ('content' in data) {
         return Buffer.from(data.content, 'base64').toString('utf-8');
@@ -99,7 +94,12 @@ export class GithubService {
 
       return null;
     } catch (err: unknown) {
+      if (err instanceof RequestError && err.status === 404) {
+        return null;
+      }
+
       this.logError('Failed to get file content', err);
+
       return null;
     }
   }

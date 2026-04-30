@@ -159,54 +159,47 @@ export class ReviewService {
     }
   }
 
+  private async tryPaths(
+    context: PRContext,
+    paths: string[],
+    label: string,
+  ): Promise<string | undefined> {
+    const tried: string[] = [];
+
+    for (const path of paths) {
+      const content = await this.githubService.getFileContent(
+        context.owner,
+        context.repo,
+        path,
+        context.sha,
+      );
+
+      if (content) {
+        if (tried.length > 0) {
+          this.logger.debug(`${label}: not found at [${tried.join(', ')}]`);
+        }
+
+        this.logger.log(`Found ${label} at: ${path}`);
+
+        return content;
+      }
+
+      tried.push(path);
+    }
+
+    this.logger.error(`${label}: not found at any of [${tried.join(', ')}]`);
+
+    return undefined;
+  }
+
   private async loadProjectInstructions(context: PRContext): Promise<string | undefined> {
-    const { copilot, scoper } = {
-      scoper: ['.scoper.md', '.scoper/rules.md', '.github/scoper.md', 'docs/scoper.md'],
-      copilot: ['.github/copilot-instructions.md'],
-    };
+    const scoperPaths = ['.scoper.md', '.scoper/rules.md', '.github/scoper.md', 'docs/scoper.md'];
+    const copilotPaths = ['.github/copilot-instructions.md'];
 
-    let scoperInstructions: string | null = null;
-    let copilotInstructions: string | null = null;
-
-    for (const path of scoper) {
-      try {
-        const content = await this.githubService.getFileContent(
-          context.owner,
-          context.repo,
-          path,
-          context.sha,
-        );
-
-        if (content) {
-          this.logger.log(`Found Scoper instructions at: ${path}`);
-          scoperInstructions = content;
-          break;
-        }
-      } catch (err: unknown) {
-        this.logger.warn(`Error loading Scoper instructions: ${getErrorMessage(err)}`);
-        continue;
-      }
-    }
-
-    for (const path of copilot) {
-      try {
-        const content = await this.githubService.getFileContent(
-          context.owner,
-          context.repo,
-          path,
-          context.sha,
-        );
-
-        if (content) {
-          this.logger.log(`Found Copilot instructions at: ${path}`);
-          copilotInstructions = content;
-          break;
-        }
-      } catch (err: unknown) {
-        this.logger.warn(`Error loading Copilot instructions: ${getErrorMessage(err)}`);
-        continue;
-      }
-    }
+    const [scoperInstructions, copilotInstructions] = await Promise.all([
+      this.tryPaths(context, scoperPaths, 'Scoper instructions'),
+      this.tryPaths(context, copilotPaths, 'Copilot instructions'),
+    ]);
 
     if (scoperInstructions && copilotInstructions) {
       this.logger.log('Merging Scoper + Copilot instructions');
@@ -215,15 +208,7 @@ export class ReviewService {
       # Additional Context from Copilot Instructions: ${copilotInstructions}`;
     }
 
-    if (scoperInstructions) {
-      return scoperInstructions;
-    }
-
-    if (copilotInstructions) {
-      return copilotInstructions;
-    }
-
-    return undefined;
+    return scoperInstructions ?? copilotInstructions;
   }
 
   private async reviewFile(
@@ -254,7 +239,6 @@ export class ReviewService {
     }));
 
     const validatedComments = this.githubService.validateComments(patch, githubComments);
-
     const infoFiltered = comments.length - filteredComments.length;
     const lineFiltered = githubComments.length - validatedComments.length;
 
