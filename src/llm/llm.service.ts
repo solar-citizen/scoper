@@ -63,11 +63,11 @@ export class LlmService {
       try {
         return await this.ollamaProvider.reviewCode(prompt);
       } catch (ollamaErr: unknown) {
-        throw new Error(`
-            Both providers failed.
-            Gemini: ${getGeminiErrorMessage(geminiErr)}, 
-            Ollama: ${getOllamaErrorMessage(ollamaErr)}
-        `);
+        // eslint-disable-next-line preserve-caught-error
+        throw new AggregateError(
+          [geminiErr, ollamaErr],
+          `Both providers failed. Gemini: ${getGeminiErrorMessage(geminiErr)}, Ollama: ${getOllamaErrorMessage(ollamaErr)}`,
+        );
       }
     }
   }
